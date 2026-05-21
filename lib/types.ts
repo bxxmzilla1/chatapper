@@ -13,7 +13,6 @@ export type Database = {
           user_city: string | null;
           user_country: string | null;
           user_country_code: string | null;
-          user_postal_code: string | null;
         };
         Insert: {
           id?: string;
@@ -26,7 +25,6 @@ export type Database = {
           user_city?: string | null;
           user_country?: string | null;
           user_country_code?: string | null;
-          user_postal_code?: string | null;
         };
         Update: {
           id?: string;
@@ -39,7 +37,6 @@ export type Database = {
           user_city?: string | null;
           user_country?: string | null;
           user_country_code?: string | null;
-          user_postal_code?: string | null;
         };
         Relationships: [];
       };

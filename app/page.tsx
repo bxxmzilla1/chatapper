@@ -9,7 +9,6 @@ type Location = {
   country: string | null;
   country_code: string | null;
   region: string | null;
-  postal_code: string | null;
 };
 
 function getFlagEmoji(countryCode: string) {
@@ -53,7 +52,6 @@ export default function LandingPage() {
           city: location?.city ?? null,
           country: location?.country ?? null,
           country_code: location?.country_code ?? null,
-          postal_code: location?.postal_code ?? null,
         }),
       });
       const data = await res.json();
