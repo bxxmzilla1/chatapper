@@ -299,8 +299,8 @@ export default function ChatPage() {
       className="flex flex-col h-screen"
       style={{ background: "var(--bg)" }}
     >
-      {/* iOS top safe area */}
-      <div className="safe-area-top" style={{ background: "var(--surface)" }} />
+      {/* iOS top safe area — matches app bg so status bar floats above header */}
+      <div className="safe-area-top" style={{ background: "var(--bg)" }} />
 
       {/* Header */}
       <div
