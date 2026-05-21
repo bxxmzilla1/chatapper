@@ -32,6 +32,7 @@ export default function AdminPage() {
   } | null>(null);
   const [search, setSearch] = useState("");
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [apiError, setApiError] = useState("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -50,9 +51,20 @@ export default function AdminPage() {
 
   // Load conversations
   const loadConversations = useCallback(async () => {
-    const res = await fetch("/api/conversations");
-    const data = await res.json();
-    setConversations(data || []);
+    try {
+      const res = await fetch("/api/conversations");
+      const data = await res.json();
+      if (!res.ok) {
+        setApiError(data.error || "Server error — check Supabase env vars");
+        setConversations([]);
+      } else {
+        setApiError("");
+        setConversations(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setApiError("Could not reach server");
+      setConversations([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -84,7 +96,7 @@ export default function AdminPage() {
     async function loadMessages() {
       const res = await fetch(`/api/messages?conversation_id=${selected!.id}`);
       const data = await res.json();
-      setMessages(data || []);
+      setMessages(Array.isArray(data) ? data : []);
 
       // Reset unread
       await fetch(`/api/conversations/${selected!.id}`, {
@@ -258,6 +270,13 @@ export default function AdminPage() {
             <LogOut className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
           </button>
         </div>
+
+        {/* Error banner */}
+        {apiError && (
+          <div className="mx-4 mt-3 px-3 py-2 rounded-xl text-xs text-red-300 bg-red-900/30 border border-red-800">
+            ⚠ {apiError}
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-4 py-3">

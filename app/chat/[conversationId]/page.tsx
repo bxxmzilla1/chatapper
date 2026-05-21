@@ -61,7 +61,7 @@ export default function ChatPage() {
         `/api/messages?conversation_id=${conversationId}`
       );
       const data = await res.json();
-      setMessages(data || []);
+      setMessages(Array.isArray(data) ? data : []);
       setTimeout(scrollToBottom, 100);
     }
     loadMessages();

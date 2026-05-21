@@ -42,9 +42,14 @@ export default function LandingPage() {
       }
 
       const conversation = await res.json();
+      if (!conversation.id) throw new Error("Invalid server response");
       router.push(`/chat/${conversation.id}?user=${encodeURIComponent(trimmed)}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof Error && err.message !== "Invalid server response"
+          ? err.message
+          : "Server error — the app isn't configured yet. Please set up Supabase."
+      );
       setLoading(false);
     }
   }
