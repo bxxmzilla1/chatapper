@@ -87,6 +87,8 @@ function VerifiedBadge({ size = 14 }: { size?: number }) {
   );
 }
 
+import { linkifyText } from "@/lib/linkify";
+
 function optimizeAvatarUrl(url: string | null, size = 160): string | null {
   if (!url) return null;
   return url
@@ -1346,7 +1348,7 @@ export default function AdminPage() {
                       )}
                       {msg.content && (
                         <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
-                          {msg.content}
+                          {linkifyText(msg.content)}
                         </p>
                       )}
                       <p

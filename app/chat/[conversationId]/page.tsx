@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
+import { linkifyText } from "@/lib/linkify";
 
 function optimizeAvatarUrl(url: string | null, size = 160): string | null {
   if (!url) return null;
@@ -361,7 +362,7 @@ export default function ChatPage() {
             )}
             {msg.content && (
               <p className="text-sm leading-relaxed text-white whitespace-pre-wrap px-2.5 pt-1">
-                {msg.content}
+                {linkifyText(msg.content)}
               </p>
             )}
             <p
