@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 type Location = {
   city: string | null;
@@ -65,7 +65,6 @@ export default function LandingPage() {
   }
 
   const cityName = location?.city ?? location?.region ?? null;
-  const flag = location?.country_code ? getFlagEmoji(location.country_code) : "";
 
   return (
     <main
@@ -80,23 +79,6 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Location badge — top right */}
-      {cityName && (
-        <div className="absolute top-5 right-5">
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-            }}
-          >
-            <MapPin className="w-3 h-3" style={{ color: "var(--accent-light)" }} />
-            {flag && <span>{flag}</span>}
-            {cityName}
-          </div>
-        </div>
-      )}
 
       {/* Main content — vertically centered */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
