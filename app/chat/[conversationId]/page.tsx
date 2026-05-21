@@ -200,19 +200,30 @@ export default function ChatPage() {
         setConverting(false);
       }
 
+      // Upload directly from browser → Supabase Storage (no Vercel timeout)
       setSending(true);
       setUploading(true);
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("conversation_id", conversationId);
-      const upRes = await fetch("/api/upload", { method: "POST", body: fd });
-      const upData = await upRes.json();
-      if (!upRes.ok) {
-        console.error("Upload failed:", upData.error);
+
+      const finalExt = (file.name.split(".").pop() ?? "mp4").toLowerCase();
+      const mimeType = file.type || (finalExt === "mp4" ? "video/mp4" : `video/${finalExt}`);
+      const storagePath = `${conversationId}/${Date.now()}.${finalExt}`;
+
+      const { error: storageError } = await supabase.storage
+        .from("chat-media")
+        .upload(storagePath, file, { contentType: mimeType, upsert: false });
+
+      if (storageError) {
+        console.error("Storage upload failed:", storageError.message);
         return;
       }
-      const { url: fileUrl, fileType } = upData;
+
+      const { data: urlData } = supabase.storage
+        .from("chat-media")
+        .getPublicUrl(storagePath);
+
+      const fileType = mimeType.startsWith("image/") ? "image" : "video";
       setUploading(false);
+
       const msgRes = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,7 +231,7 @@ export default function ChatPage() {
           conversation_id: conversationId,
           content: null,
           sender_type: "user",
-          file_url: fileUrl,
+          file_url: urlData.publicUrl,
           file_type: fileType,
         }),
       });

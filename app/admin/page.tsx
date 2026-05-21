@@ -177,14 +177,22 @@ export default function AdminPage() {
 
       if (preview) {
         setUploading(true);
-        const fd = new FormData();
-        fd.append("file", preview.file);
-        fd.append("conversation_id", selected.id);
-        const upRes = await fetch("/api/upload", { method: "POST", body: fd });
-        if (!upRes.ok) throw new Error("Upload failed");
-        const upData = await upRes.json();
-        fileUrl = upData.url;
-        fileType = upData.fileType;
+        const finalExt = (preview.file.name.split(".").pop() ?? "mp4").toLowerCase();
+        const mimeType = preview.file.type || (finalExt === "mp4" ? "video/mp4" : `video/${finalExt}`);
+        const storagePath = `${selected.id}/${Date.now()}.${finalExt}`;
+
+        const { error: storageError } = await supabase.storage
+          .from("chat-media")
+          .upload(storagePath, preview.file, { contentType: mimeType, upsert: false });
+
+        if (storageError) throw new Error(storageError.message);
+
+        const { data: urlData } = supabase.storage
+          .from("chat-media")
+          .getPublicUrl(storagePath);
+
+        fileUrl = urlData.publicUrl;
+        fileType = mimeType.startsWith("image/") ? "image" : "video";
         setUploading(false);
         setPreview(null);
       }
