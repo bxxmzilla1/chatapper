@@ -174,9 +174,21 @@ export default function AdminPage() {
     finally { setModelsLoading(false); }
   }, []);
 
+  // Load models on mount so badge logic works everywhere, reload when Links tab opens
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
+
   useEffect(() => {
     if (sidebarTab === "links") loadModels();
   }, [sidebarTab, loadModels]);
+
+  // Badge is visible only when the conversation's current persona IS the original model name
+  function showModelBadge(conv: Conversation) {
+    if (!conv.model_slug) return false;
+    const model = models.find(m => m.slug === conv.model_slug);
+    return model ? model.name === conv.admin_username : false;
+  }
 
   function autoSlug(name: string) {
     return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -602,7 +614,7 @@ export default function AdminPage() {
                       <span className="text-xs flex-shrink-0" style={{ color: "var(--accent-light)" }}>
                         {conv.admin_username}
                       </span>
-                      {conv.model_slug && <VerifiedBadge size={11} />}
+                      {showModelBadge(conv) && <VerifiedBadge size={11} />}
                       <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
                         {" · "}{conv.last_message || "No messages yet"}
                       </span>
@@ -857,11 +869,12 @@ export default function AdminPage() {
                     </span>
                   )}
                   {selected.user_city && <span>·</span>}
-                  <span>
+                  <span className="flex items-center gap-1">
                     Replying as{" "}
                     <span style={{ color: "var(--accent-light)" }}>
                       {selected.admin_username}
                     </span>
+                    {showModelBadge(selected) && <VerifiedBadge size={12} />}
                   </span>
                 </p>
               </div>
