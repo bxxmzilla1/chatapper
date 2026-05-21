@@ -10,10 +10,11 @@ import {
   ArrowLeft,
   Send,
   Paperclip,
-  Image as ImageIcon,
   Video,
   X,
   Circle,
+  Shuffle,
+  Heart,
 } from "lucide-react";
 
 export default function ChatPage() {
@@ -27,12 +28,16 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [preview, setPreview] = useState<{
     file: File;
     url: string;
     type: "image" | "video";
   } | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  // Tracks all persona names the user has "matched" with in order
+  const [matchHistory, setMatchHistory] = useState<string[]>([]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +55,7 @@ export default function ChatPage() {
       }
       const data = await res.json();
       setConversation(data);
+      setMatchHistory([data.admin_username]);
     }
     load();
   }, [conversationId, router]);
@@ -67,9 +73,9 @@ export default function ChatPage() {
     loadMessages();
   }, [conversationId, scrollToBottom]);
 
-  // Real-time subscription
+  // Real-time subscription for messages + conversation updates
   useEffect(() => {
-    const channel = supabase
+    const msgChannel = supabase
       .channel(`conv:${conversationId}`)
       .on(
         "postgres_changes",
@@ -85,16 +91,33 @@ export default function ChatPage() {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
-          if (newMsg.sender_type === "admin") {
-            setIsTyping(false);
-          }
+          if (newMsg.sender_type === "admin") setIsTyping(false);
           setTimeout(scrollToBottom, 50);
         }
       )
       .subscribe();
 
+    // Also subscribe to conversation updates (admin_username changes)
+    const convChannel = supabase
+      .channel(`conv-meta:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversations",
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Conversation;
+          setConversation(updated);
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(convChannel);
     };
   }, [conversationId, scrollToBottom]);
 
@@ -145,23 +168,129 @@ export default function ChatPage() {
     }
   }
 
+  async function handleSwitchMatch() {
+    if (switching) return;
+    setSwitching(true);
+
+    try {
+      const res = await fetch(
+        `/api/conversations/${conversationId}/switch`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error("Switch failed");
+      const data = await res.json();
+      // Update local match history so the transition card shows immediately
+      setMatchHistory((prev) => [...prev, data.admin_username]);
+    } catch {
+      // silently handle
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const type = file.type.startsWith("image/") ? "image" : "video";
-    const url = URL.createObjectURL(file);
-    setPreview({ file, url, type });
-
+    setPreview({ file, url: URL.createObjectURL(file), type });
     if (fileRef.current) fileRef.current.value = "";
   }
 
   function formatTime(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(dateStr).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
-  const adminName = conversation?.admin_username ?? "…";
+  // Current active persona name (last in match history or from conversation)
+  const currentPersona = conversation?.admin_username ?? matchHistory[matchHistory.length - 1] ?? "…";
+
+  // Render messages, injecting persona switch cards from system messages
+  function renderMessages() {
+    const items: React.ReactNode[] = [];
+
+    messages.forEach((msg, i) => {
+      if (msg.sender_type === "system" && msg.content?.startsWith("SWITCH:")) {
+        const newName = msg.content.replace("SWITCH:", "");
+        items.push(
+          <MatchSwitchCard key={msg.id} name={newName} time={msg.created_at} />
+        );
+        return;
+      }
+
+      const isUser = msg.sender_type === "user";
+      const prevMsg = messages[i - 1];
+      // Find the current admin name at this point in time (latest SWITCH before this message)
+      let adminNameAtPoint = matchHistory[0] ?? currentPersona;
+      for (let j = 0; j <= i; j++) {
+        if (
+          messages[j].sender_type === "system" &&
+          messages[j].content?.startsWith("SWITCH:")
+        ) {
+          adminNameAtPoint = messages[j].content!.replace("SWITCH:", "");
+        }
+      }
+
+      const showName =
+        !isUser &&
+        msg.sender_type === "admin" &&
+        (i === 0 ||
+          prevMsg?.sender_type !== "admin");
+
+      items.push(
+        <div
+          key={msg.id}
+          className={`flex flex-col ${isUser ? "items-end" : "items-start"} animate-fade-up`}
+        >
+          {showName && (
+            <p
+              className="text-xs mb-1 px-1"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {adminNameAtPoint}
+            </p>
+          )}
+          <div
+            className={`max-w-[80%] rounded-2xl px-4 py-2.5 relative ${
+              isUser ? "bubble-user rounded-br-sm" : "bubble-admin rounded-bl-sm"
+            }`}
+            style={{
+              background: isUser ? "var(--bubble-user)" : "var(--bubble-admin)",
+            }}
+          >
+            {msg.file_url && msg.file_type === "image" && (
+              <img
+                src={msg.file_url}
+                alt="shared"
+                className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+              />
+            )}
+            {msg.file_url && msg.file_type === "video" && (
+              <video
+                src={msg.file_url}
+                controls
+                className="rounded-xl max-w-full max-h-64 mb-1"
+              />
+            )}
+            {msg.content && (
+              <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
+                {msg.content}
+              </p>
+            )}
+            <p
+              className={`text-xs mt-1 ${isUser ? "text-right" : "text-left"}`}
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              {formatTime(msg.created_at)}
+            </p>
+          </div>
+        </div>
+      );
+    });
+
+    return items;
+  }
 
   return (
     <div
@@ -189,18 +318,15 @@ export default function ChatPage() {
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 relative"
           style={{ background: "var(--accent)" }}
         >
-          {adminName[0]}
+          {currentPersona[0]}
           <span
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-            style={{
-              background: "#22c55e",
-              borderColor: "var(--surface)",
-            }}
+            style={{ background: "#22c55e", borderColor: "var(--surface)" }}
           />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white truncate">{adminName}</p>
+          <p className="font-semibold text-white truncate">{currentPersona}</p>
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
             {isTyping ? (
               <span className="flex items-center gap-1">
@@ -212,80 +338,38 @@ export default function ChatPage() {
             )}
           </p>
         </div>
+
+        {/* New Match button */}
+        <button
+          onClick={handleSwitchMatch}
+          disabled={switching}
+          title="Find a new match"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition active:scale-95 disabled:opacity-50"
+          style={{ background: "var(--surface2)", color: "var(--accent-light)" }}
+        >
+          <Shuffle className={`w-4 h-4 ${switching ? "animate-spin" : ""}`} />
+          {switching ? "Matching…" : "New Match"}
+        </button>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-        {messages.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-12">
+        {messages.filter(m => m.sender_type !== "system").length === 0 && (
+          <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
               style={{ background: "var(--surface2)" }}
             >
-              {adminName[0]}
+              {currentPersona[0]}
             </div>
-            <p className="font-semibold text-white">{adminName}</p>
+            <p className="font-semibold text-white">{currentPersona}</p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Say hi to start the conversation!
+              You&apos;ve been matched! Say hi 👋
             </p>
           </div>
         )}
 
-        {messages.map((msg, i) => {
-          const isUser = msg.sender_type === "user";
-          const showName =
-            !isUser &&
-            (i === 0 || messages[i - 1].sender_type !== msg.sender_type);
-          return (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${isUser ? "items-end" : "items-start"} animate-fade-up`}
-            >
-              {showName && (
-                <p
-                  className="text-xs mb-1 px-1"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {adminName}
-                </p>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 relative ${
-                  isUser ? "bubble-user rounded-br-sm" : "bubble-admin rounded-bl-sm"
-                }`}
-                style={{
-                  background: isUser ? "var(--bubble-user)" : "var(--bubble-admin)",
-                }}
-              >
-                {msg.file_url && msg.file_type === "image" && (
-                  <img
-                    src={msg.file_url}
-                    alt="shared"
-                    className="rounded-xl max-w-full max-h-64 object-cover mb-1"
-                  />
-                )}
-                {msg.file_url && msg.file_type === "video" && (
-                  <video
-                    src={msg.file_url}
-                    controls
-                    className="rounded-xl max-w-full max-h-64 mb-1"
-                  />
-                )}
-                {msg.content && (
-                  <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
-                    {msg.content}
-                  </p>
-                )}
-                <p
-                  className={`text-xs mt-1 ${isUser ? "text-right" : "text-left"}`}
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
-                  {formatTime(msg.created_at)}
-                </p>
-              </div>
-            </div>
-          );
-        })}
+        {renderMessages()}
 
         {isTyping && (
           <div className="flex items-start gap-2 animate-fade-up">
@@ -398,6 +482,51 @@ export default function ChatPage() {
           <Send className="w-5 h-5 text-white" />
         </button>
       </form>
+    </div>
+  );
+}
+
+// ─── Match Switch Card (user-visible) ────────────────────────────────────────
+function MatchSwitchCard({ name, time }: { name: string; time: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-4 animate-fade-up">
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+        <div
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-medium"
+          style={{
+            background: "var(--surface2)",
+            border: "1px solid var(--border)",
+            color: "var(--text-muted)",
+          }}
+        >
+          <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
+          New match found
+        </div>
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+      </div>
+      <div
+        className="flex flex-col items-center gap-1.5 px-6 py-4 rounded-2xl"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white"
+          style={{ background: "var(--accent)" }}
+        >
+          {name[0]}
+        </div>
+        <p className="font-semibold text-white text-sm">{name}</p>
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          matched with you · {new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </p>
+        <div className="flex items-center gap-1 mt-1">
+          <span className="w-2 h-2 rounded-full bg-green-400" />
+          <span className="text-xs text-green-400">Online now</span>
+        </div>
+      </div>
     </div>
   );
 }

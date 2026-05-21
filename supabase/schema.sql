@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id  UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
   content          TEXT,
-  sender_type      TEXT NOT NULL CHECK (sender_type IN ('user', 'admin')),
+  sender_type      TEXT NOT NULL CHECK (sender_type IN ('user', 'admin', 'system')),
   file_url         TEXT,
   file_type        TEXT CHECK (file_type IN ('image', 'video')),
   created_at       TIMESTAMPTZ DEFAULT NOW()
@@ -93,3 +93,14 @@ CREATE POLICY "Public read chat-media"
 -- OR run:
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+
+-- ============================================================
+-- MIGRATION: Run this if you already ran the schema above
+-- Adds 'system' sender_type for match-switch events
+-- ============================================================
+ALTER TABLE public.messages
+  DROP CONSTRAINT IF EXISTS messages_sender_type_check;
+
+ALTER TABLE public.messages
+  ADD CONSTRAINT messages_sender_type_check
+  CHECK (sender_type IN ('user', 'admin', 'system'));

@@ -36,7 +36,7 @@ export type Database = {
           id: string;
           conversation_id: string;
           content: string | null;
-          sender_type: "user" | "admin";
+          sender_type: "user" | "admin" | "system";
           file_url: string | null;
           file_type: "image" | "video" | null;
           created_at: string;
@@ -45,7 +45,7 @@ export type Database = {
           id?: string;
           conversation_id: string;
           content?: string | null;
-          sender_type: "user" | "admin";
+          sender_type: "user" | "admin" | "system";
           file_url?: string | null;
           file_type?: "image" | "video" | null;
           created_at?: string;
@@ -54,7 +54,7 @@ export type Database = {
           id?: string;
           conversation_id?: string;
           content?: string | null;
-          sender_type?: "user" | "admin";
+          sender_type?: "user" | "admin" | "system";
           file_url?: string | null;
           file_type?: "image" | "video" | null;
           created_at?: string;
