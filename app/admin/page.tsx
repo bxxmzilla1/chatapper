@@ -1,0 +1,579 @@
+"use client";
+
+export const dynamic = "force-dynamic";
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import type { Conversation, Message } from "@/lib/types";
+import {
+  LogOut,
+  Send,
+  Paperclip,
+  Video,
+  X,
+  Search,
+  MessageSquare,
+  ArrowLeft,
+} from "lucide-react";
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selected, setSelected] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<{
+    file: File;
+    url: string;
+    type: "image" | "video";
+  } | null>(null);
+  const [search, setSearch] = useState("");
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Auth guard
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const auth = sessionStorage.getItem("admin_auth");
+      if (!auth) router.replace("/admin/login");
+    }
+  }, [router]);
+
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  // Load conversations
+  const loadConversations = useCallback(async () => {
+    const res = await fetch("/api/conversations");
+    const data = await res.json();
+    setConversations(data || []);
+  }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Subscribe to new conversations
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-conversations")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations" },
+        () => {
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadConversations]);
+
+  // Load messages for selected conversation
+  useEffect(() => {
+    if (!selected) return;
+
+    async function loadMessages() {
+      const res = await fetch(`/api/messages?conversation_id=${selected!.id}`);
+      const data = await res.json();
+      setMessages(data || []);
+
+      // Reset unread
+      await fetch(`/api/conversations/${selected!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unread_count: 0 }),
+      });
+
+      setTimeout(scrollToBottom, 100);
+    }
+
+    loadMessages();
+  }, [selected, scrollToBottom]);
+
+  // Subscribe to messages in selected conversation
+  useEffect(() => {
+    if (!selected) return;
+
+    const channel = supabase
+      .channel(`admin-conv:${selected.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${selected.id}`,
+        },
+        (payload) => {
+          const msg = payload.new as Message;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+          setTimeout(scrollToBottom, 50);
+
+          // Clear unread for selected
+          if (msg.sender_type === "user") {
+            fetch(`/api/conversations/${selected.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ unread_count: 0 }),
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selected, scrollToBottom]);
+
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!selected) return;
+    const trimmed = input.trim();
+    if (!trimmed && !preview) return;
+    if (sending || uploading) return;
+
+    setSending(true);
+
+    try {
+      let fileUrl: string | null = null;
+      let fileType: "image" | "video" | null = null;
+
+      if (preview) {
+        setUploading(true);
+        const fd = new FormData();
+        fd.append("file", preview.file);
+        fd.append("conversation_id", selected.id);
+        const upRes = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!upRes.ok) throw new Error("Upload failed");
+        const upData = await upRes.json();
+        fileUrl = upData.url;
+        fileType = upData.fileType;
+        setUploading(false);
+        setPreview(null);
+      }
+
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: selected.id,
+          content: trimmed || null,
+          sender_type: "admin",
+          file_url: fileUrl,
+          file_type: fileType,
+        }),
+      });
+
+      setInput("");
+    } catch {
+      // silently handle
+    } finally {
+      setSending(false);
+      setUploading(false);
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const type = file.type.startsWith("image/") ? "image" : "video";
+    setPreview({ file, url: URL.createObjectURL(file), type });
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function formatTime(dateStr: string) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor(
+      (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (diffDays === 0)
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 1) return "Yesterday";
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem("admin_auth");
+    router.push("/admin/login");
+  }
+
+  const filtered = conversations.filter(
+    (c) =>
+      c.user_username.toLowerCase().includes(search.toLowerCase()) ||
+      c.admin_username.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function selectConv(conv: Conversation) {
+    setSelected(conv);
+    setMessages([]);
+    setMobileView("chat");
+  }
+
+  return (
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{ background: "var(--bg)" }}
+    >
+      {/* Sidebar */}
+      <div
+        className={`flex flex-col w-full md:w-80 lg:w-96 flex-shrink-0 ${
+          mobileView === "chat" ? "hidden md:flex" : "flex"
+        }`}
+        style={{
+          background: "var(--surface)",
+          borderRight: "1px solid var(--border)",
+        }}
+      >
+        {/* Sidebar header */}
+        <div
+          className="px-4 py-4 flex items-center justify-between"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
+          <div>
+            <h1 className="font-bold text-lg text-white">Admin Panel</h1>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-xl transition hover:opacity-70"
+            style={{ background: "var(--surface2)" }}
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3">
+          <div
+            className="flex items-center gap-2 px-3 py-2 rounded-xl"
+            style={{ background: "var(--surface2)" }}
+          >
+            <Search className="w-4 h-4 flex-shrink-0" style={{ color: "var(--text-muted)" }} />
+            <input
+              type="text"
+              placeholder="Search users…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-transparent outline-none text-sm w-full"
+              style={{ color: "var(--text)" }}
+            />
+          </div>
+        </div>
+
+        {/* Conversations list */}
+        <div className="flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2">
+              <MessageSquare className="w-8 h-8" style={{ color: "var(--border)" }} />
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                No conversations yet
+              </p>
+            </div>
+          ) : (
+            filtered.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => selectConv(conv)}
+                className="w-full flex items-center gap-3 px-4 py-3 transition text-left"
+                style={{
+                  background:
+                    selected?.id === conv.id
+                      ? "var(--surface2)"
+                      : "transparent",
+                  borderLeft:
+                    selected?.id === conv.id
+                      ? "3px solid var(--accent)"
+                      : "3px solid transparent",
+                }}
+              >
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 text-sm"
+                  style={{ background: "var(--accent)" }}
+                >
+                  {conv.user_username[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-white text-sm truncate">
+                      {conv.user_username}
+                    </p>
+                    <span
+                      className="text-xs flex-shrink-0 ml-2"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {formatTime(conv.last_message_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      as{" "}
+                      <span style={{ color: "var(--accent-light)" }}>
+                        {conv.admin_username}
+                      </span>{" "}
+                      · {conv.last_message || "No messages yet"}
+                    </p>
+                    {conv.unread_count > 0 && (
+                      <span
+                        className="ml-2 flex-shrink-0 text-xs font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                        style={{ background: "var(--accent)" }}
+                      >
+                        {conv.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Chat area */}
+      <div
+        className={`flex-1 flex flex-col min-w-0 ${
+          mobileView === "list" ? "hidden md:flex" : "flex"
+        }`}
+      >
+        {!selected ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <MessageSquare
+              className="w-16 h-16"
+              style={{ color: "var(--border)" }}
+            />
+            <p className="text-lg font-medium text-white">
+              Select a conversation
+            </p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Pick a chat from the left to start replying
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Chat header */}
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              style={{
+                background: "var(--surface)",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <button
+                onClick={() => setMobileView("list")}
+                className="md:hidden p-2 rounded-xl"
+                style={{ background: "var(--surface2)" }}
+              >
+                <ArrowLeft className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+              </button>
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                style={{ background: "var(--accent)" }}
+              >
+                {selected.user_username[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-white truncate">
+                  {selected.user_username}
+                </p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Replying as{" "}
+                  <span style={{ color: "var(--accent-light)" }}>
+                    {selected.admin_username}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+              {messages.map((msg, i) => {
+                const isAdmin = msg.sender_type === "admin";
+                const showName =
+                  i === 0 ||
+                  messages[i - 1].sender_type !== msg.sender_type;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isAdmin ? "items-end" : "items-start"} animate-fade-up`}
+                  >
+                    {showName && (
+                      <p
+                        className="text-xs mb-1 px-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {isAdmin
+                          ? `You (as ${selected.admin_username})`
+                          : selected.user_username}
+                      </p>
+                    )}
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 relative ${
+                        isAdmin
+                          ? "bubble-user rounded-br-sm"
+                          : "bubble-admin rounded-bl-sm"
+                      }`}
+                      style={{
+                        background: isAdmin
+                          ? "var(--bubble-user)"
+                          : "var(--bubble-admin)",
+                      }}
+                    >
+                      {msg.file_url && msg.file_type === "image" && (
+                        <img
+                          src={msg.file_url}
+                          alt="shared"
+                          className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+                        />
+                      )}
+                      {msg.file_url && msg.file_type === "video" && (
+                        <video
+                          src={msg.file_url}
+                          controls
+                          className="rounded-xl max-w-full max-h-64 mb-1"
+                        />
+                      )}
+                      {msg.content && (
+                        <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
+                          {msg.content}
+                        </p>
+                      )}
+                      <p
+                        className={`text-xs mt-1 ${isAdmin ? "text-right" : "text-left"}`}
+                        style={{ color: "rgba(255,255,255,0.45)" }}
+                      >
+                        {new Date(msg.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* File preview */}
+            {preview && (
+              <div
+                className="px-4 py-2 flex items-center gap-3"
+                style={{
+                  background: "var(--surface)",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <div className="relative">
+                  {preview.type === "image" ? (
+                    <img
+                      src={preview.url}
+                      alt="preview"
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="h-14 w-14 rounded-lg flex items-center justify-center"
+                      style={{ background: "var(--surface2)" }}
+                    >
+                      <Video
+                        className="w-6 h-6"
+                        style={{ color: "var(--accent)" }}
+                      />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setPreview(null)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ background: "var(--border)" }}
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {uploading ? "Uploading…" : preview.file.name}
+                </p>
+              </div>
+            )}
+
+            {/* Input */}
+            <form
+              onSubmit={sendMessage}
+              className="px-4 py-3 flex items-end gap-2"
+              style={{
+                background: "var(--surface)",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="p-2.5 rounded-xl flex-shrink-0 transition hover:opacity-70"
+                style={{ background: "var(--surface2)" }}
+              >
+                <Paperclip
+                  className="w-5 h-5"
+                  style={{ color: "var(--text-muted)" }}
+                />
+              </button>
+              <div
+                className="flex-1 flex items-end rounded-2xl px-4 py-2.5 min-h-[48px]"
+                style={{
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder={`Reply as ${selected.admin_username}…`}
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed max-h-32 overflow-y-auto"
+                  style={{ color: "var(--text)" }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={sending || uploading || (!input.trim() && !preview)}
+                className="p-3 rounded-xl flex-shrink-0 transition active:scale-95 disabled:opacity-40"
+                style={{ background: "var(--accent)" }}
+              >
+                <Send className="w-5 h-5 text-white" />
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
