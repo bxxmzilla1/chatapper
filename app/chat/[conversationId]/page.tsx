@@ -305,9 +305,9 @@ export default function ChatPage() {
             </p>
           )}
           <div
-            className={`max-w-[80%] rounded-2xl px-4 py-2.5 relative ${
-              isUser ? "bubble-user rounded-br-sm" : "bubble-admin rounded-bl-sm"
-            }`}
+            className={`max-w-[85%] rounded-2xl relative ${
+              msg.file_url ? "p-1.5" : "px-4 py-2.5"
+            } ${isUser ? "bubble-user rounded-br-sm" : "bubble-admin rounded-bl-sm"}`}
             style={{
               background: isUser ? "var(--bubble-user)" : "var(--bubble-admin)",
             }}
@@ -316,18 +316,17 @@ export default function ChatPage() {
               <img
                 src={msg.file_url}
                 alt="shared"
-                className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+                className="rounded-xl block"
+                style={{ width: "260px", maxWidth: "100%", height: "auto" }}
               />
             )}
             {msg.file_url && msg.file_type === "video" && (
               <video
                 controls
                 playsInline
-                preload="metadata"
-                width={1280}
-                height={720}
-                className="rounded-xl w-full mb-1 block"
-                style={{ maxWidth: "320px", maxHeight: "180px", objectFit: "cover" }}
+                preload="auto"
+                className="rounded-xl mb-1 block"
+                style={{ width: "260px", maxWidth: "100%", height: "auto" }}
               >
                 <source src={msg.file_url} type="video/mp4" />
                 <source src={msg.file_url} type="video/quicktime" />
@@ -335,13 +334,13 @@ export default function ChatPage() {
               </video>
             )}
             {msg.content && (
-              <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
+              <p className="text-sm leading-relaxed text-white whitespace-pre-wrap px-2.5 pt-1">
                 {msg.content}
               </p>
             )}
             <p
-              className={`text-xs mt-1 ${isUser ? "text-right" : "text-left"}`}
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              className={`text-xs px-2.5 pb-1 pt-0.5 ${msg.file_url && !msg.content ? "text-right" : isUser ? "text-right" : "text-left"}`}
+              style={{ color: "rgba(255,255,255,0.55)" }}
             >
               {formatTime(msg.created_at)}
             </p>

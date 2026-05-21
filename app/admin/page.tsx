@@ -672,11 +672,9 @@ export default function AdminPage() {
                         <video
                           controls
                           playsInline
-                          preload="metadata"
-                          width={1280}
-                          height={720}
-                          className="rounded-xl w-full mb-1 block"
-                          style={{ maxWidth: "320px", maxHeight: "180px", objectFit: "cover" }}
+                          preload="auto"
+                          className="rounded-xl mb-1 block"
+                          style={{ width: "260px", maxWidth: "100%", height: "auto" }}
                         >
                           <source src={msg.file_url} type="video/mp4" />
                           <source src={msg.file_url} type="video/quicktime" />
