@@ -1,6 +1,6 @@
 {
-  "name": "ChatUp",
-  "short_name": "ChatUp",
+  "name": "Flinky",
+  "short_name": "Flinky",
   "description": "Chat with random people instantly — no sign up needed",
   "start_url": "/",
   "display": "standalone",

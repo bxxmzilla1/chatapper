@@ -105,7 +105,7 @@ export default function LandingPage() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">
-              ChatUp
+              Flinky
             </h1>
           <p className="mt-2 text-xl font-semibold text-center text-white">
             {cityName ? (
@@ -213,7 +213,7 @@ export default function LandingPage() {
           className="text-xs"
           style={{ color: "rgba(136,136,168,0.4)" }}
         >
-          {cityName ? `${cityName} · ` : ""}ChatUp
+          {cityName ? `${cityName} · ` : ""}Flinky
         </p>
       </div>
     </main>

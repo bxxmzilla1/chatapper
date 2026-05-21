@@ -216,7 +216,7 @@ export default function ModelLandingPage() {
 
       <div className="pb-8 flex justify-center">
         <p className="text-xs" style={{ color: "rgba(136,136,168,0.4)" }}>
-          {model.name} · ChatUp
+          {model.name} · Flinky
         </p>
       </div>
     </main>

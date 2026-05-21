@@ -6,13 +6,13 @@ import { ServiceWorkerRegister } from "./sw-register";
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChatUp",
+  title: "Flinky",
   description: "Chat with random people instantly — no sign up needed",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ChatUp",
+    title: "Flinky",
   },
 };
 
