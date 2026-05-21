@@ -27,14 +27,17 @@ body {
   color: var(--text);
 }
 
-/* Full-screen shell — use on every page's outermost div */
+/* Full-screen shell — pinned to viewport so iOS keyboard can't scroll or push it */
 .page-shell {
-  height: 100svh;          /* Fallback for older Safari */
-  height: 100dvh;          /* Dynamic viewport — excludes iOS browser chrome (preferred) */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Top safe area padding: the bg of this element shows behind the status bar */
+  /* Top safe area: background of this element shows behind the status bar */
   padding-top: env(safe-area-inset-top, 0px);
 }
 
