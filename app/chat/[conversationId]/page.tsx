@@ -315,8 +315,7 @@ export default function ChatPage() {
               <img
                 src={msg.file_url}
                 alt="shared"
-                className="rounded-xl block"
-                style={{ width: "220px", maxWidth: "100%", height: "auto" }}
+                className="media-bubble rounded-xl"
               />
             )}
             {msg.file_url && msg.file_type === "video" && (
@@ -552,8 +551,7 @@ function VideoMessage({ src }: { src: string }) {
       playsInline
       preload="metadata"
       poster={poster}
-      className="rounded-xl block"
-      style={{ width: "220px", maxWidth: "100%", height: "auto" }}
+      className="media-bubble rounded-xl"
     >
       <source src={src} type="video/mp4" />
       <source src={src} type="video/quicktime" />

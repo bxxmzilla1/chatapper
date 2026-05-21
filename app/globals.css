@@ -109,6 +109,19 @@ body {
   animation-delay: 0.4s;
 }
 
+/* Responsive video/image bubble size */
+.media-bubble {
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+@media (min-width: 768px) {
+  .media-bubble {
+    width: 320px;
+  }
+}
+
 /* Message bubble tail */
 .bubble-user::after {
   content: "";

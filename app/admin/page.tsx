@@ -45,8 +45,7 @@ function VideoMessage({ src }: { src: string }) {
       playsInline
       preload="metadata"
       poster={poster}
-      className="rounded-xl block"
-      style={{ width: "220px", maxWidth: "100%", height: "auto" }}
+      className="media-bubble rounded-xl"
     >
       <source src={src} type="video/mp4" />
       <source src={src} type="video/quicktime" />
@@ -716,7 +715,7 @@ export default function AdminPage() {
                         <img
                           src={msg.file_url}
                           alt="shared"
-                          className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+                          className="media-bubble rounded-xl"
                         />
                       )}
                       {msg.file_url && msg.file_type === "video" && (
