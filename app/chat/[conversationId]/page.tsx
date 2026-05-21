@@ -26,6 +26,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [convertPct, setConvertPct] = useState(0);
   const [switching, setSwitching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   // Tracks all persona names the user has "matched" with in order
@@ -177,13 +179,29 @@ export default function ChatPage() {
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
     if (fileRef.current) fileRef.current.value = "";
-    if (sending || uploading) return;
-    setSending(true);
-    setUploading(true);
+    if (sending || uploading || converting) return;
+
     try {
+      // Convert non-MP4/WebM videos to MP4 before uploading
+      const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+      const type = file.type.toLowerCase();
+      const isVideo = type.startsWith("video/") || ["mov","avi","mkv","3gp","m4v","flv","wmv","ts"].includes(ext);
+      const alreadyMp4 = type === "video/mp4" || ext === "mp4";
+      const alreadyWebm = type === "video/webm" || ext === "webm";
+
+      if (isVideo && !alreadyMp4 && !alreadyWebm) {
+        setConverting(true);
+        setConvertPct(0);
+        const { ensureMp4 } = await import("@/lib/convert-video");
+        file = await ensureMp4(file, (pct) => setConvertPct(pct));
+        setConverting(false);
+      }
+
+      setSending(true);
+      setUploading(true);
       const fd = new FormData();
       fd.append("file", file);
       fd.append("conversation_id", conversationId);
@@ -211,6 +229,7 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error("File send error:", err);
+      setConverting(false);
     } finally {
       setSending(false);
       setUploading(false);
@@ -418,8 +437,8 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Uploading indicator */}
-      {uploading && (
+      {/* Converting / uploading indicator */}
+      {(converting || uploading) && (
         <div
           className="px-4 py-2 flex items-center gap-2"
           style={{
@@ -427,8 +446,14 @@ export default function ChatPage() {
             borderTop: "1px solid var(--border)",
           }}
         >
-          <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Uploading…</p>
+          <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin flex-shrink-0" />
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {converting
+              ? convertPct > 0
+                ? `Converting video… ${convertPct}%`
+                : "Preparing converter…"
+              : "Uploading…"}
+          </p>
         </div>
       )}
 
