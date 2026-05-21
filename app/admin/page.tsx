@@ -75,6 +75,7 @@ import {
   Copy,
   Check,
   GitBranch,
+  Pencil,
 } from "lucide-react";
 
 function VerifiedBadge({ size = 14 }: { size?: number }) {
@@ -135,6 +136,14 @@ export default function AdminPage() {
   const [duplicatingSlug, setDuplicatingSlug] = useState<string | null>(null);
   const [duplicateNewSlug, setDuplicateNewSlug] = useState("");
   const [savingDuplicate, setSavingDuplicate] = useState(false);
+  // Edit model profile
+  const [editingModelSlug, setEditingModelSlug] = useState<string | null>(null);
+  const [editModelName, setEditModelName] = useState("");
+  const [editModelSubtitle, setEditModelSubtitle] = useState("");
+  const [editModelAvatar, setEditModelAvatar] = useState<File | null>(null);
+  const [editModelAvatarPreview, setEditModelAvatarPreview] = useState<string | null>(null);
+  const [savingEditModel, setSavingEditModel] = useState(false);
+  const editAvatarRef = useRef<HTMLInputElement>(null);
   const modelAvatarRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -304,6 +313,47 @@ export default function AdminPage() {
         loadModels();
       }
     } finally { setSavingDuplicate(false); }
+  }
+
+  function openEditModel(m: ModelProfile) {
+    setEditingModelSlug(m.slug);
+    setEditModelName(m.name);
+    setEditModelSubtitle(m.subtitle);
+    setEditModelAvatarPreview(m.avatar_url);
+    setEditModelAvatar(null);
+    // Close other panels
+    setEditingRedirectSlug(null);
+    setDuplicatingSlug(null);
+  }
+
+  async function saveEditModel(m: ModelProfile) {
+    setSavingEditModel(true);
+    try {
+      let avatar_url = m.avatar_url;
+      if (editModelAvatar) {
+        const ext = editModelAvatar.name.split(".").pop() ?? "jpg";
+        const path = `models/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("chat-media").upload(path, editModelAvatar, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+          avatar_url = urlData.publicUrl;
+        }
+      }
+      const res = await fetch(`/api/models/${m.slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editModelName.trim() || m.name,
+          subtitle: editModelSubtitle.trim() || m.subtitle,
+          avatar_url,
+        }),
+      });
+      if (res.ok) {
+        const updated: ModelProfile = await res.json();
+        setModels(prev => prev.map(x => x.slug === m.slug ? updated : x));
+        setEditingModelSlug(null);
+      }
+    } finally { setSavingEditModel(false); }
   }
 
   // Subscribe to new conversations
@@ -882,6 +932,15 @@ export default function AdminPage() {
                           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                         </svg>
                       </button>
+                      {/* Edit */}
+                      <button
+                        onClick={() => editingModelSlug === m.slug ? setEditingModelSlug(null) : openEditModel(m)}
+                        className="p-1.5 rounded-lg transition hover:opacity-70"
+                        style={{ background: editingModelSlug === m.slug ? "var(--accent)" : "var(--surface)", color: editingModelSlug === m.slug ? "#fff" : "var(--text-muted)" }}
+                        title="Edit profile"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       {/* Duplicate */}
                       <button
                         onClick={() => duplicatingSlug === m.slug ? setDuplicatingSlug(null) : openDuplicate(m)}
@@ -973,6 +1032,81 @@ export default function AdminPage() {
                           className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
                           style={{ background: "var(--accent)", color: "#fff" }}>
                           {savingDuplicate ? "Creating…" : "Duplicate"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Edit profile panel ── */}
+                  {editingModelSlug === m.slug && (
+                    <div className="px-3 pb-3 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p className="text-xs pt-3 font-semibold text-white">Edit Profile</p>
+
+                      {/* Avatar */}
+                      <div
+                        className="relative w-20 h-20 rounded-full mx-auto cursor-pointer overflow-hidden flex items-center justify-center"
+                        style={{ border: "2px dashed var(--border)" }}
+                        onClick={() => editAvatarRef.current?.click()}
+                      >
+                        {editModelAvatarPreview ? (
+                          <img src={editModelAvatarPreview} className="w-full h-full object-cover" alt="avatar" />
+                        ) : (
+                          <span className="text-xs text-center px-1" style={{ color: "var(--text-muted)" }}>Photo</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-full">
+                          <Pencil className="w-4 h-4 text-white" />
+                        </div>
+                        <input
+                          ref={editAvatarRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            setEditModelAvatar(f);
+                            setEditModelAvatarPreview(URL.createObjectURL(f));
+                          }}
+                        />
+                      </div>
+
+                      {/* Name */}
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Name</label>
+                        <input
+                          type="text"
+                          value={editModelName}
+                          maxLength={30}
+                          onChange={e => setEditModelName(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      {/* Subtitle */}
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Subtitle  <span style={{ opacity: 0.6 }}>(use CITY or COUNTRY)</span></label>
+                        <input
+                          type="text"
+                          value={editModelSubtitle}
+                          onChange={e => setEditModelSubtitle(e.target.value)}
+                          placeholder="Meet people in CITY"
+                          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingModelSlug(null)}
+                          className="flex-1 py-2.5 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => saveEditModel(m)}
+                          disabled={savingEditModel}
+                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-50"
+                          style={{ background: "var(--accent)", color: "#fff" }}>
+                          {savingEditModel ? "Saving…" : "Save Changes"}
                         </button>
                       </div>
                     </div>
