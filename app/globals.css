@@ -25,11 +25,17 @@ body {
   color: var(--text);
 }
 
-/* iOS safe area helpers */
-.safe-top    { padding-top:    env(safe-area-inset-top, 0px); }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.safe-left   { padding-left:   env(safe-area-inset-left, 0px); }
-.safe-right  { padding-right:  env(safe-area-inset-right, 0px); }
+/* iOS safe area spacers — use as sibling divs, not padding overrides */
+.safe-area-top {
+  height: env(safe-area-inset-top, 0px);
+  min-height: env(safe-area-inset-top, 0px);
+  flex-shrink: 0;
+}
+.safe-area-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+  min-height: env(safe-area-inset-bottom, 0px);
+  flex-shrink: 0;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar {

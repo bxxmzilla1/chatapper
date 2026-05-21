@@ -68,9 +68,10 @@ export default function LandingPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col safe-top safe-bottom"
+      className="min-h-screen flex flex-col"
       style={{ background: "var(--bg)" }}
     >
+      <div className="safe-area-top" style={{ background: "var(--bg)" }} />
       {/* Subtle gradient top accent */}
       <div
         className="absolute top-0 left-0 right-0 h-px"
@@ -216,6 +217,7 @@ export default function LandingPage() {
           {cityName ? `${cityName} · ` : ""}ChatUp
         </p>
       </div>
+      <div className="safe-area-bottom" style={{ background: "var(--bg)" }} />
     </main>
   );
 }

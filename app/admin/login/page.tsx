@@ -40,7 +40,9 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 safe-top safe-bottom" style={{ background: "var(--bg)" }}>
+    <main className="min-h-screen flex flex-col px-4" style={{ background: "var(--bg)" }}>
+      <div className="safe-area-top" style={{ background: "var(--bg)" }} />
+      <div className="flex-1 flex items-center justify-center">
       <div
         className="w-full max-w-sm rounded-3xl p-8 shadow-2xl animate-fade-up"
         style={{
@@ -107,6 +109,8 @@ export default function AdminLoginPage() {
           </button>
         </form>
       </div>
+      </div>
+      <div className="safe-area-bottom" style={{ background: "var(--bg)" }} />
     </main>
   );
 }
