@@ -87,6 +87,13 @@ function VerifiedBadge({ size = 14 }: { size?: number }) {
   );
 }
 
+function optimizeAvatarUrl(url: string | null, size = 160): string | null {
+  if (!url) return null;
+  return url
+    .replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")
+    .concat(`?width=${size}&height=${size}&quality=80&resize=cover`);
+}
+
 function getFlagEmoji(code: string) {
   return code
     .toUpperCase()
@@ -891,7 +898,7 @@ export default function AdminPage() {
                   <div className="p-3 flex items-center gap-3">
                     {/* Avatar */}
                     {m.avatar_url ? (
-                      <img src={m.avatar_url} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
+                      <img src={optimizeAvatarUrl(m.avatar_url) ?? ""} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
                     ) : (
                       <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
                         {m.name[0]}
@@ -1053,7 +1060,7 @@ export default function AdminPage() {
                         onClick={() => editAvatarRef.current?.click()}
                       >
                         {editModelAvatarPreview ? (
-                          <img src={editModelAvatarPreview} className="w-full h-full object-cover" alt="avatar" />
+                          <img src={editModelAvatar ? editModelAvatarPreview! : (optimizeAvatarUrl(editModelAvatarPreview) ?? editModelAvatarPreview!)} className="w-full h-full object-cover" alt="avatar" />
                         ) : (
                           <span className="text-xs text-center px-1" style={{ color: "var(--text-muted)" }}>Photo</span>
                         )}

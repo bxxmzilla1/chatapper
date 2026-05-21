@@ -6,6 +6,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
+
+function optimizeAvatarUrl(url: string | null, size = 160): string | null {
+  if (!url) return null;
+  return url
+    .replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")
+    .concat(`?width=${size}&height=${size}&quality=80&resize=cover`);
+}
 import {
   Send,
   Paperclip,
@@ -385,7 +392,7 @@ export default function ChatPage() {
         {/* Avatar */}
         <div className="relative flex-shrink-0">
           {modelAvatarUrl ? (
-            <img src={modelAvatarUrl} alt={currentPersona} className="w-10 h-10 rounded-full object-cover" />
+            <img src={optimizeAvatarUrl(modelAvatarUrl) ?? ""} alt={currentPersona} className="w-10 h-10 rounded-full object-cover" />
           ) : (
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
@@ -435,7 +442,7 @@ export default function ChatPage() {
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
             {modelAvatarUrl ? (
-              <img src={modelAvatarUrl} alt={currentPersona} className="w-16 h-16 rounded-full object-cover" />
+              <img src={optimizeAvatarUrl(modelAvatarUrl) ?? ""} alt={currentPersona} className="w-16 h-16 rounded-full object-cover" />
             ) : (
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"

@@ -3,7 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 import type { ModelProfile } from "@/lib/types";
+
+/** Converts a Supabase storage URL to a resized/compressed version via the render API */
+function optimizeAvatarUrl(url: string | null, size = 420): string | null {
+  if (!url) return null;
+  return url
+    .replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")
+    .concat(`?width=${size}&height=${size}&quality=80&resize=cover`);
+}
 
 type Location = { city: string | null; country: string | null; country_code: string | null; region: string | null };
 
@@ -120,9 +129,12 @@ export default function ModelLandingPage() {
             {/* Avatar */}
             <div className="relative mb-5">
               {model.avatar_url ? (
-                <img
-                  src={model.avatar_url}
+                <Image
+                  src={optimizeAvatarUrl(model.avatar_url) ?? model.avatar_url}
                   alt={model.name}
+                  width={420}
+                  height={420}
+                  priority
                   className="w-24 h-24 rounded-full object-cover"
                   style={{ border: "3px solid var(--accent)", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}
                 />
