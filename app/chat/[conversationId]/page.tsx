@@ -335,16 +335,8 @@ export default function ChatPage() {
                 <Circle className="w-2 h-2 fill-green-400 text-green-400" />
                 typing…
               </>
-            ) : conversation?.user_city ? (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                Nearby in {conversation.user_city}
-              </>
             ) : (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                Online · Nearby
-              </>
+              "Online"
             )}
           </p>
         </div>
