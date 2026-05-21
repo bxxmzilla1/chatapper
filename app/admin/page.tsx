@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [apiError, setApiError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingConvId, setDeletingConvId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -209,6 +211,24 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteConversation(convId: string) {
+    setDeletingConvId(convId);
+    setConfirmDeleteId(null);
+    try {
+      await fetch(`/api/conversations/${convId}`, { method: "DELETE" });
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      if (selected?.id === convId) {
+        setSelected(null);
+        setMessages([]);
+        setMobileView("list");
+      }
+    } catch {
+      // silently handle
+    } finally {
+      setDeletingConvId(null);
+    }
+  }
+
   async function deleteMessage(msgId: string) {
     setDeletingId(msgId);
     try {
@@ -338,8 +358,35 @@ export default function AdminPage() {
                 ? getFlagEmoji(conv.user_country_code)
                 : "";
               return (
-                <button
+                <div
                   key={conv.id}
+                  className="group/row relative"
+                >
+                {/* Inline delete confirmation */}
+                {confirmDeleteId === conv.id && (
+                  <div
+                    className="absolute inset-0 z-10 flex items-center justify-center gap-2 px-4 rounded-sm"
+                    style={{ background: "rgba(15,15,19,0.95)", backdropFilter: "blur(4px)" }}
+                  >
+                    <p className="text-xs text-white flex-1">Delete this chat?</p>
+                    <button
+                      onClick={() => deleteConversation(conv.id)}
+                      disabled={deletingConvId === conv.id}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
+                      style={{ background: "#dc2626" }}
+                    >
+                      {deletingConvId === conv.id ? "Deleting…" : "Delete"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      style={{ background: "var(--surface2)", color: "var(--text-muted)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                <button
                   onClick={() => selectConv(conv)}
                   className="w-full flex items-start gap-3 px-4 py-3.5 transition text-left"
                   style={{
@@ -347,6 +394,7 @@ export default function AdminPage() {
                     borderLeft: isSelected
                       ? "3px solid var(--accent)"
                       : "3px solid transparent",
+                    opacity: deletingConvId === conv.id ? 0.4 : 1,
                   }}
                 >
                   {/* Avatar with unread dot */}
@@ -408,6 +456,19 @@ export default function AdminPage() {
                     </p>
                   </div>
                 </button>
+
+                {/* Delete chat button — hover reveal */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDeleteId(conv.id);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 p-1.5 rounded-lg transition-all hover:bg-red-900/40"
+                  title="Delete chat"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                </button>
+                </div>
               );
             })
           )}
