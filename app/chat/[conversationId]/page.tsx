@@ -10,8 +10,6 @@ import {
   ArrowLeft,
   Send,
   Paperclip,
-  Video,
-  X,
   Circle,
   Shuffle,
   Heart,
@@ -29,11 +27,6 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const [preview, setPreview] = useState<{
-    file: File;
-    url: string;
-    type: "image" | "video";
-  } | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   // Tracks all persona names the user has "matched" with in order
   const [matchHistory, setMatchHistory] = useState<string[]>([]);
@@ -124,47 +117,27 @@ export default function ChatPage() {
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed && !preview) return;
+    if (!trimmed) return;
     if (sending || uploading) return;
-
     setSending(true);
 
     try {
-      let fileUrl: string | null = null;
-      let fileType: "image" | "video" | null = null;
-
-      if (preview) {
-        setUploading(true);
-        const fd = new FormData();
-        fd.append("file", preview.file);
-        fd.append("conversation_id", conversationId);
-        const upRes = await fetch("/api/upload", { method: "POST", body: fd });
-        if (!upRes.ok) throw new Error("Upload failed");
-        const upData = await upRes.json();
-        fileUrl = upData.url;
-        fileType = upData.fileType;
-        setUploading(false);
-        setPreview(null);
-      }
-
       await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_id: conversationId,
-          content: trimmed || null,
+          content: trimmed,
           sender_type: "user",
-          file_url: fileUrl,
-          file_type: fileType,
+          file_url: null,
+          file_type: null,
         }),
       });
-
       setInput("");
     } catch {
       // silently handle
     } finally {
       setSending(false);
-      setUploading(false);
     }
   }
 
@@ -188,12 +161,38 @@ export default function ChatPage() {
     }
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const type = file.type.startsWith("image/") ? "image" : "video";
-    setPreview({ file, url: URL.createObjectURL(file), type });
     if (fileRef.current) fileRef.current.value = "";
+    if (sending || uploading) return;
+    setSending(true);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("conversation_id", conversationId);
+      const upRes = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!upRes.ok) throw new Error("Upload failed");
+      const { url: fileUrl, fileType } = await upRes.json();
+      setUploading(false);
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          content: null,
+          sender_type: "user",
+          file_url: fileUrl,
+          file_type: fileType,
+        }),
+      });
+    } catch {
+      // silently handle
+    } finally {
+      setSending(false);
+      setUploading(false);
+    }
   }
 
   function formatTime(dateStr: string) {
@@ -394,41 +393,17 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* File preview */}
-      {preview && (
+      {/* Uploading indicator */}
+      {uploading && (
         <div
-          className="px-4 py-2 flex items-center gap-3"
+          className="px-4 py-2 flex items-center gap-2"
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--border)",
           }}
         >
-          <div className="relative">
-            {preview.type === "image" ? (
-              <img
-                src={preview.url}
-                alt="preview"
-                className="h-14 w-14 rounded-lg object-cover"
-              />
-            ) : (
-              <div
-                className="h-14 w-14 rounded-lg flex items-center justify-center"
-                style={{ background: "var(--surface2)" }}
-              >
-                <Video className="w-6 h-6" style={{ color: "var(--accent)" }} />
-              </div>
-            )}
-            <button
-              onClick={() => setPreview(null)}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: "var(--border)" }}
-            >
-              <X className="w-3 h-3 text-white" />
-            </button>
-          </div>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {uploading ? "Uploading…" : preview.file.name}
-          </p>
+          <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Uploading…</p>
         </div>
       )}
 
@@ -482,7 +457,7 @@ export default function ChatPage() {
 
         <button
           type="submit"
-          disabled={sending || uploading || (!input.trim() && !preview)}
+          disabled={sending || uploading || !input.trim()}
           className="p-3 rounded-xl flex-shrink-0 transition active:scale-95 disabled:opacity-40"
           style={{ background: "var(--accent)" }}
         >
