@@ -924,33 +924,33 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      {/* URL input — only when toggle is ON */}
-                      {redirectToggleOn && (
-                        <>
-                          <input
-                            type="url"
-                            value={editRedirectUrl}
-                            onChange={e => setEditRedirectUrl(e.target.value)}
-                            placeholder="https://example.com/…"
-                            autoFocus
-                            className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
-                          />
-                          <div className="flex gap-2">
-                            <button onClick={() => setEditingRedirectSlug(null)}
-                              className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => patchRedirectUrl(m.slug, editRedirectUrl.trim() || null)}
-                              disabled={savingRedirect}
-                              className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
-                              style={{ background: "#f59e0b", color: "#000" }}>
-                              {savingRedirect ? "Saving…" : editRedirectUrl.trim() ? "Set Redirect" : "Remove Redirect"}
-                            </button>
-                          </div>
-                        </>
-                      )}
+                      {/* URL input — always visible so it's never lost */}
+                      <input
+                        type="url"
+                        value={editRedirectUrl}
+                        onChange={e => setEditRedirectUrl(e.target.value)}
+                        placeholder="https://example.com/…"
+                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                        style={{
+                          background: "var(--surface)",
+                          border: `1px solid ${redirectToggleOn ? "#f59e0b55" : "var(--border)"}`,
+                          color: redirectToggleOn ? "var(--text)" : "var(--text-muted)",
+                          opacity: redirectToggleOn ? 1 : 0.5,
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingRedirectSlug(null)}
+                          className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => patchRedirectUrl(m.slug, redirectToggleOn && editRedirectUrl.trim() ? editRedirectUrl.trim() : null)}
+                          disabled={savingRedirect}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
+                          style={{ background: "#f59e0b", color: "#000" }}>
+                          {savingRedirect ? "Saving…" : redirectToggleOn && editRedirectUrl.trim() ? "Set Redirect" : "Use Landing Page"}
+                        </button>
+                      </div>
                     </div>
                   )}
 
