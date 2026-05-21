@@ -282,7 +282,7 @@ export default function AdminPage() {
       >
         {/* Sidebar header */}
         <div
-          className="px-4 py-4 flex items-center justify-between"
+          className="px-4 py-4 flex items-center justify-between safe-top"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
           <div>
@@ -485,7 +485,7 @@ export default function AdminPage() {
           <>
             {/* Chat header */}
             <div
-              className="flex items-center gap-3 px-4 py-3"
+              className="flex items-center gap-3 px-4 py-3 safe-top"
               style={{
                 background: "var(--surface)",
                 borderBottom: "1px solid var(--border)",
@@ -733,7 +733,7 @@ export default function AdminPage() {
             {/* Input */}
             <form
               onSubmit={sendMessage}
-              className="px-4 py-3 flex items-end gap-2"
+              className="px-4 pt-3 pb-3 safe-bottom flex items-end gap-2"
               style={{
                 background: "var(--surface)",
                 borderTop: "1px solid var(--border)",
