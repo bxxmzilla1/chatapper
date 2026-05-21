@@ -39,6 +39,7 @@ export default function ChatPage() {
   const [switching, setSwitching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [modelAvatarUrl, setModelAvatarUrl] = useState<string | null>(null);
+  const [isModelPersona, setIsModelPersona] = useState(false);
   // Tracks all persona names the user has "matched" with in order
   const [matchHistory, setMatchHistory] = useState<string[]>([]);
 
@@ -72,6 +73,7 @@ export default function ChatPage() {
       setMatchHistory([data.admin_username]);
       // Fetch model avatar if this chat came from a model page
       if (data.model_slug) {
+        setIsModelPersona(true);
         fetch(`/api/models/${data.model_slug}`)
           .then(r => r.ok ? r.json() : null)
           .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
@@ -187,6 +189,9 @@ export default function ChatPage() {
       const data = await res.json();
       // Update local match history so the transition card shows immediately
       setMatchHistory((prev) => [...prev, data.admin_username]);
+      // New persona is a random match — clear model avatar and verified badge
+      setModelAvatarUrl(null);
+      setIsModelPersona(false);
     } catch {
       // silently handle
     } finally {
@@ -398,7 +403,7 @@ export default function ChatPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <p className="font-semibold text-white truncate">{currentPersona}</p>
-            {conversation?.model_slug && <VerifiedBadge size={16} />}
+            {isModelPersona && <VerifiedBadge size={16} />}
           </div>
           <p className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             {isTyping ? (
@@ -441,7 +446,7 @@ export default function ChatPage() {
             )}
             <div className="flex items-center gap-1.5">
               <p className="font-semibold text-white">{currentPersona}</p>
-              {conversation?.model_slug && <VerifiedBadge size={16} />}
+              {isModelPersona && <VerifiedBadge size={16} />}
             </div>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {conversation?.user_city
