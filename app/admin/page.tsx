@@ -74,6 +74,7 @@ import {
   Plus,
   Copy,
   Check,
+  GitBranch,
 } from "lucide-react";
 
 function VerifiedBadge({ size = 14 }: { size?: number }) {
@@ -128,6 +129,7 @@ export default function AdminPage() {
   // Redirect editing
   const [editingRedirectSlug, setEditingRedirectSlug] = useState<string | null>(null);
   const [editRedirectUrl, setEditRedirectUrl] = useState("");
+  const [redirectToggleOn, setRedirectToggleOn] = useState(false);
   const [savingRedirect, setSavingRedirect] = useState(false);
   // Duplicate
   const [duplicatingSlug, setDuplicatingSlug] = useState<string | null>(null);
@@ -249,16 +251,17 @@ export default function AdminPage() {
   function openEditRedirect(m: ModelProfile) {
     setEditingRedirectSlug(m.slug);
     setEditRedirectUrl(m.redirect_url ?? "");
+    setRedirectToggleOn(!!m.redirect_url);
     setDuplicatingSlug(null);
   }
 
-  async function saveRedirect(slug: string) {
+  async function patchRedirectUrl(slug: string, url: string | null) {
     setSavingRedirect(true);
     try {
       const res = await fetch(`/api/models/${slug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ redirect_url: editRedirectUrl.trim() || null }),
+        body: JSON.stringify({ redirect_url: url || null }),
       });
       if (res.ok) {
         const updated: ModelProfile = await res.json();
@@ -266,6 +269,17 @@ export default function AdminPage() {
         setEditingRedirectSlug(null);
       }
     } finally { setSavingRedirect(false); }
+  }
+
+  async function handleRedirectToggle(m: ModelProfile) {
+    if (redirectToggleOn) {
+      // Switching OFF → immediately save null (back to landing page)
+      await patchRedirectUrl(m.slug, null);
+    } else {
+      // Switching ON → show URL input, don't save yet
+      setRedirectToggleOn(true);
+      setEditRedirectUrl("");
+    }
   }
 
   function openDuplicate(m: ModelProfile) {
@@ -879,10 +893,7 @@ export default function AdminPage() {
                         style={{ background: duplicatingSlug === m.slug ? "var(--accent)" : "var(--surface)", color: duplicatingSlug === m.slug ? "#fff" : "var(--text-muted)" }}
                         title="Duplicate link"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                        </svg>
+                        <GitBranch className="w-3.5 h-3.5" />
                       </button>
                       {/* Delete */}
                       <button onClick={() => handleDeleteModel(m.slug)} disabled={deletingModelSlug === m.slug}
@@ -894,29 +905,58 @@ export default function AdminPage() {
 
                   {/* Redirect edit panel */}
                   {editingRedirectSlug === m.slug && (
-                    <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border)" }}>
-                      <p className="text-xs pt-2 font-medium" style={{ color: "var(--text-muted)" }}>
-                        Redirect URL — leave empty to use the landing page
-                      </p>
-                      <input
-                        type="url"
-                        value={editRedirectUrl}
-                        onChange={e => setEditRedirectUrl(e.target.value)}
-                        placeholder="https://example.com/…"
-                        className="w-full px-3 py-2 rounded-xl text-sm outline-none"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => setEditingRedirectSlug(null)}
-                          className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
-                          Cancel
-                        </button>
-                        <button onClick={() => saveRedirect(m.slug)} disabled={savingRedirect}
-                          className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
-                          style={{ background: "var(--accent)", color: "#fff" }}>
-                          {savingRedirect ? "Saving…" : editRedirectUrl.trim() ? "Set Redirect" : "Use Landing Page"}
+                    <div className="px-3 pb-3 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
+                      {/* Toggle row */}
+                      <div className="flex items-center justify-between pt-3">
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-xs font-semibold text-white">
+                            {redirectToggleOn ? "Redirect URL" : "Landing Page"}
+                          </p>
+                          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                            {redirectToggleOn ? "Visitors are sent to an external URL" : "Visitors see the chat landing page"}
+                          </p>
+                        </div>
+                        {/* iOS-style toggle */}
+                        <button
+                          onClick={() => handleRedirectToggle(m)}
+                          disabled={savingRedirect}
+                          className="relative flex-shrink-0 w-12 h-6 rounded-full transition-all duration-200 disabled:opacity-50"
+                          style={{ background: redirectToggleOn ? "#f59e0b" : "var(--surface)" }}
+                        >
+                          <span
+                            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-200"
+                            style={{ left: redirectToggleOn ? "calc(100% - 20px)" : "4px" }}
+                          />
                         </button>
                       </div>
+
+                      {/* URL input — only when toggle is ON */}
+                      {redirectToggleOn && (
+                        <>
+                          <input
+                            type="url"
+                            value={editRedirectUrl}
+                            onChange={e => setEditRedirectUrl(e.target.value)}
+                            placeholder="https://example.com/…"
+                            autoFocus
+                            className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => setEditingRedirectSlug(null)}
+                              className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => patchRedirectUrl(m.slug, editRedirectUrl.trim() || null)}
+                              disabled={savingRedirect || !editRedirectUrl.trim()}
+                              className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
+                              style={{ background: "#f59e0b", color: "#000" }}>
+                              {savingRedirect ? "Saving…" : "Set Redirect"}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
