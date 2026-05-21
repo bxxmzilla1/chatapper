@@ -426,6 +426,9 @@ export default function AdminPage() {
                         <span className="text-xs truncate" style={{ color: "#f472b6" }}>
                           {flag && <span className="mr-0.5">{flag}</span>}
                           {locationLabel}
+                          {conv.user_postal_code && (
+                            <span style={{ color: "var(--text-muted)" }}> · {conv.user_postal_code}</span>
+                          )}
                         </span>
                       </div>
                     )}
@@ -520,6 +523,9 @@ export default function AdminPage() {
                     <span className="flex items-center gap-0.5" style={{ color: "#f472b6" }}>
                       <MapPin className="w-2.5 h-2.5" />
                       {selected.user_city}{selected.user_country ? `, ${selected.user_country}` : ""}
+                      {selected.user_postal_code && (
+                        <span style={{ color: "var(--text-muted)" }}> {selected.user_postal_code}</span>
+                      )}
                     </span>
                   )}
                   {selected.user_city && <span>·</span>}

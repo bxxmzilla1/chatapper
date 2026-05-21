@@ -30,8 +30,9 @@ export async function GET(req: NextRequest) {
       country: data.geo?.country ?? null,
       country_code: data.geo?.country_code ?? null,
       region: data.geo?.region ?? null,
+      postal_code: data.geo?.postal_code ?? null,
     });
   } catch {
-    return NextResponse.json({ city: null, country: null, country_code: null, region: null });
+    return NextResponse.json({ city: null, country: null, country_code: null, region: null, postal_code: null });
   }
 }

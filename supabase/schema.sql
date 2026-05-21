@@ -111,4 +111,5 @@ ALTER TABLE public.messages
 ALTER TABLE public.conversations
   ADD COLUMN IF NOT EXISTS user_city         TEXT,
   ADD COLUMN IF NOT EXISTS user_country      TEXT,
-  ADD COLUMN IF NOT EXISTS user_country_code TEXT;
+  ADD COLUMN IF NOT EXISTS user_country_code TEXT,
+  ADD COLUMN IF NOT EXISTS user_postal_code  TEXT;
