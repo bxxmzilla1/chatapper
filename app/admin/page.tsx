@@ -271,15 +271,9 @@ export default function AdminPage() {
     } finally { setSavingRedirect(false); }
   }
 
-  async function handleRedirectToggle(m: ModelProfile) {
-    if (redirectToggleOn) {
-      // Switching OFF → immediately save null (back to landing page)
-      await patchRedirectUrl(m.slug, null);
-    } else {
-      // Switching ON → show URL input, don't save yet
-      setRedirectToggleOn(true);
-      setEditRedirectUrl("");
-    }
+  function handleRedirectToggle() {
+    // Just show/hide the URL input — never auto-saves
+    setRedirectToggleOn(v => !v);
   }
 
   function openDuplicate(m: ModelProfile) {
@@ -918,7 +912,7 @@ export default function AdminPage() {
                         </div>
                         {/* iOS-style toggle */}
                         <button
-                          onClick={() => handleRedirectToggle(m)}
+                          onClick={() => handleRedirectToggle()}
                           disabled={savingRedirect}
                           className="relative flex-shrink-0 w-12 h-6 rounded-full transition-all duration-200 disabled:opacity-50"
                           style={{ background: redirectToggleOn ? "#f59e0b" : "var(--surface)" }}
@@ -949,10 +943,10 @@ export default function AdminPage() {
                             </button>
                             <button
                               onClick={() => patchRedirectUrl(m.slug, editRedirectUrl.trim() || null)}
-                              disabled={savingRedirect || !editRedirectUrl.trim()}
+                              disabled={savingRedirect}
                               className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
                               style={{ background: "#f59e0b", color: "#000" }}>
-                              {savingRedirect ? "Saving…" : "Set Redirect"}
+                              {savingRedirect ? "Saving…" : editRedirectUrl.trim() ? "Set Redirect" : "Remove Redirect"}
                             </button>
                           </div>
                         </>
