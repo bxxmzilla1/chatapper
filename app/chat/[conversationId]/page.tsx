@@ -207,12 +207,19 @@ export default function ChatPage() {
       const mimeType = file.type || (finalExt === "mp4" ? "video/mp4" : `video/${finalExt}`);
       const storagePath = `${conversationId}/${Date.now()}.${finalExt}`;
 
-      const { error: storageError } = await supabase.storage
-        .from("chat-media")
-        .upload(storagePath, file, { contentType: mimeType, upsert: false });
+      // Retry up to 3 times in case of transient network errors
+      let storageError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const result = await supabase.storage
+          .from("chat-media")
+          .upload(storagePath, file, { contentType: mimeType, upsert: attempt > 1 });
+        if (!result.error) { storageError = null; break; }
+        storageError = result.error;
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
 
       if (storageError) {
-        console.error("Storage upload failed:", storageError.message);
+        console.error("Storage upload failed after retries:", storageError.message);
         return;
       }
 

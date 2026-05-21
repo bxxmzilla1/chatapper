@@ -2,19 +2,30 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
 let ffmpeg: FFmpeg | null = null;
+let ffmpegLoading: Promise<FFmpeg> | null = null;
 
 const CORE_VERSION = "0.12.10";
 const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 async function getFFmpeg(): Promise<FFmpeg> {
+  // Return existing instance
   if (ffmpeg) return ffmpeg;
-  ffmpeg = new FFmpeg();
-  // Single-threaded core — does NOT require SharedArrayBuffer or COOP/COEP headers
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
-  });
-  return ffmpeg;
+  // Prevent parallel load attempts
+  if (ffmpegLoading) return ffmpegLoading;
+
+  ffmpegLoading = (async () => {
+    const instance = new FFmpeg();
+    // Single-threaded core — does NOT require SharedArrayBuffer or COOP/COEP headers
+    await instance.load({
+      coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+    });
+    ffmpeg = instance;
+    ffmpegLoading = null;
+    return instance;
+  })();
+
+  return ffmpegLoading;
 }
 
 /** Returns the file unchanged if it's already MP4/WebM; otherwise converts to MP4. */
@@ -30,31 +41,54 @@ export async function ensureMp4(
 
   const instance = await getFFmpeg();
 
-  if (onProgress) {
-    instance.on("progress", ({ progress }) => onProgress(Math.round(progress * 100)));
-  }
+  const progressHandler = onProgress
+    ? ({ progress }: { progress: number }) => onProgress(Math.min(99, Math.round(progress * 100)))
+    : null;
+  if (progressHandler) instance.on("progress", progressHandler);
 
   const inputName = `input.${ext || "mov"}`;
-  await instance.writeFile(inputName, await fetchFile(file));
 
-  await instance.exec([
-    "-i", inputName,
-    "-c:v", "libx264",
-    "-preset", "ultrafast", // fastest encode — smaller quality trade-off is fine for chat
-    "-crf", "28",
-    "-c:a", "aac",
-    "-movflags", "faststart", // optimises for streaming/playback before full download
-    "output.mp4",
-  ]);
+  try {
+    await instance.writeFile(inputName, await fetchFile(file));
 
-  const data = await instance.readFile("output.mp4");
-  instance.deleteFile(inputName);
-  instance.deleteFile("output.mp4");
+    await instance.exec([
+      "-i", inputName,
+      "-c:v", "libx264",
+      "-preset", "ultrafast",
+      "-crf", "28",
+      "-c:a", "aac",
+      "-movflags", "faststart",
+      "output.mp4",
+    ]);
 
-  if (onProgress) instance.off("progress", () => {});
+    const data = await instance.readFile("output.mp4");
 
-  // Copy into a regular ArrayBuffer to satisfy strict TS types
-  const raw = data as Uint8Array;
-  const buf = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer;
-  return new File([buf], "video.mp4", { type: "video/mp4" });
+    // ⚠️ Copy the buffer into a plain ArrayBuffer BEFORE deleting FFmpeg virtual
+    // files — deleteFile frees WASM memory that `data` may still point into.
+    const raw = data as Uint8Array;
+    const buf = raw.buffer.slice(
+      raw.byteOffset,
+      raw.byteOffset + raw.byteLength
+    ) as ArrayBuffer;
+    const converted = new File([buf], "video.mp4", { type: "video/mp4" });
+
+    // Safe to clean up now that we have an independent copy
+    try { instance.deleteFile(inputName); } catch { /* ignore */ }
+    try { instance.deleteFile("output.mp4"); } catch { /* ignore */ }
+
+    if (progressHandler) {
+      instance.off("progress", progressHandler);
+      onProgress?.(100);
+    }
+
+    return converted;
+  } catch (err) {
+    // Clean up on failure so the next attempt starts fresh
+    try { instance.deleteFile(inputName); } catch { /* ignore */ }
+    try { instance.deleteFile("output.mp4"); } catch { /* ignore */ }
+    if (progressHandler) instance.off("progress", progressHandler);
+    // Reset the cached instance so the next call re-initialises cleanly
+    ffmpeg = null;
+    throw err;
+  }
 }
