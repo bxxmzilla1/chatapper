@@ -125,14 +125,16 @@ export default function LandingPage() {
             <h1 className="text-3xl font-bold text-white tracking-tight">
               ChatUp
             </h1>
-            <p
-              className="mt-1.5 text-sm text-center"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {cityName
-                ? `Meet people in ${cityName}`
-                : "Meet people near you"}
-            </p>
+          <p className="mt-2 text-xl font-semibold text-center text-white">
+            {cityName ? (
+              <>
+                Meet people in{" "}
+                <span style={{ color: "var(--accent-light)" }}>{cityName}</span>
+              </>
+            ) : (
+              "Meet people near you"
+            )}
+          </p>
           </div>
 
           {/* Input form */}
