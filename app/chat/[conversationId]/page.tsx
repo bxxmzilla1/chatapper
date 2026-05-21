@@ -33,6 +33,7 @@ export default function ChatPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,6 +121,10 @@ export default function ChatPage() {
     if (!trimmed) return;
     if (sending || uploading) return;
     setSending(true);
+    // Clear immediately so the UI feels instant
+    setInput("");
+    // Keep keyboard open
+    textareaRef.current?.focus();
 
     try {
       await fetch("/api/messages", {
@@ -133,7 +138,6 @@ export default function ChatPage() {
           file_type: null,
         }),
       });
-      setInput("");
     } catch {
       // silently handle
     } finally {
@@ -435,14 +439,9 @@ export default function ChatPage() {
           }}
         >
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
             placeholder="Message…"
             rows={1}
             className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed max-h-32 overflow-y-auto"
