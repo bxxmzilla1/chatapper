@@ -18,8 +18,14 @@ export function linkifyText(text: string): React.ReactNode {
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline underline-offset-2 break-all"
-          style={{ color: "var(--accent-light)" }}
+          className="break-all font-semibold"
+          style={{
+            color: "#ffffff",
+            textDecoration: "underline",
+            textDecorationColor: "rgba(255,255,255,0.7)",
+            textUnderlineOffset: "3px",
+            textDecorationThickness: "1.5px",
+          }}
           onClick={e => e.stopPropagation()}
         >
           {part}
