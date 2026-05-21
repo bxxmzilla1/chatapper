@@ -3,6 +3,57 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+
+// ─── Video Message — captures first frame as poster so iOS shows a thumbnail ──
+function VideoMessage({ src }: { src: string }) {
+  const [poster, setPoster] = useState<string | undefined>();
+
+  useEffect(() => {
+    let cancelled = false;
+    const vid = document.createElement("video");
+    vid.crossOrigin = "anonymous";
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.preload = "metadata";
+    vid.src = src;
+
+    const capture = () => {
+      if (cancelled || vid.videoWidth === 0) return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = vid.videoWidth;
+        canvas.height = vid.videoHeight;
+        canvas.getContext("2d")?.drawImage(vid, 0, 0);
+        const url = canvas.toDataURL("image/jpeg", 0.85);
+        if (url.startsWith("data:image")) setPoster(url);
+      } catch {
+        // CORS restriction — proceed without poster
+      }
+    };
+
+    vid.addEventListener("loadeddata", capture);
+    vid.addEventListener("seeked", capture);
+    vid.currentTime = 0.01;
+    vid.load();
+
+    return () => { cancelled = true; };
+  }, [src]);
+
+  return (
+    <video
+      controls
+      playsInline
+      preload="metadata"
+      poster={poster}
+      className="rounded-xl block"
+      style={{ width: "220px", maxWidth: "100%", height: "auto" }}
+    >
+      <source src={src} type="video/mp4" />
+      <source src={src} type="video/quicktime" />
+      <source src={src} type="video/webm" />
+    </video>
+  );
+}
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Conversation, Message } from "@/lib/types";
@@ -669,17 +720,7 @@ export default function AdminPage() {
                         />
                       )}
                       {msg.file_url && msg.file_type === "video" && (
-                        <video
-                          controls
-                          playsInline
-                          preload="auto"
-                          className="rounded-xl mb-1 block"
-                          style={{ width: "260px", maxWidth: "100%", height: "auto" }}
-                        >
-                          <source src={msg.file_url} type="video/mp4" />
-                          <source src={msg.file_url} type="video/quicktime" />
-                          <source src={msg.file_url} type="video/webm" />
-                        </video>
+                        <VideoMessage src={msg.file_url} />
                       )}
                       {msg.content && (
                         <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
