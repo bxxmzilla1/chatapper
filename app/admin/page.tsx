@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 // ─── Video Message — captures first frame as poster so iOS shows a thumbnail ──
 function VideoMessage({ src }: { src: string }) {
   const [poster, setPoster] = useState<string | undefined>();
+  const [ratio, setRatio] = useState("9/16");
 
   useEffect(() => {
     let cancelled = false;
@@ -19,6 +20,7 @@ function VideoMessage({ src }: { src: string }) {
 
     const capture = () => {
       if (cancelled || vid.videoWidth === 0) return;
+      setRatio(`${vid.videoWidth}/${vid.videoHeight}`);
       try {
         const canvas = document.createElement("canvas");
         canvas.width = vid.videoWidth;
@@ -46,6 +48,7 @@ function VideoMessage({ src }: { src: string }) {
       preload="metadata"
       poster={poster}
       className="media-bubble rounded-xl"
+      style={{ aspectRatio: ratio }}
     >
       <source src={src} type="video/mp4" />
       <source src={src} type="video/quicktime" />
