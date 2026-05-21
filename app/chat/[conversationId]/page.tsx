@@ -374,7 +374,9 @@ export default function ChatPage() {
             </div>
             <p className="font-semibold text-white">{currentPersona}</p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Matched with you! Say hi 👋
+              {conversation?.user_city
+                ? `Nearby in ${conversation.user_city} · Say hi 👋`
+                : "Nearby · Say hi 👋"}
             </p>
           </div>
         )}
