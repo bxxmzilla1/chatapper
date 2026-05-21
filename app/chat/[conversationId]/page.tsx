@@ -188,10 +188,14 @@ export default function ChatPage() {
       fd.append("file", file);
       fd.append("conversation_id", conversationId);
       const upRes = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!upRes.ok) throw new Error("Upload failed");
-      const { url: fileUrl, fileType } = await upRes.json();
+      const upData = await upRes.json();
+      if (!upRes.ok) {
+        console.error("Upload failed:", upData.error);
+        return;
+      }
+      const { url: fileUrl, fileType } = upData;
       setUploading(false);
-      await fetch("/api/messages", {
+      const msgRes = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -202,8 +206,11 @@ export default function ChatPage() {
           file_type: fileType,
         }),
       });
-    } catch {
-      // silently handle
+      if (!msgRes.ok) {
+        console.error("Message save failed");
+      }
+    } catch (err) {
+      console.error("File send error:", err);
     } finally {
       setSending(false);
       setUploading(false);
