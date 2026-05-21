@@ -207,12 +207,21 @@ export default function LandingPage() {
           </form>
 
           {/* Footer note */}
-          <p
-            className="mt-6 text-xs text-center leading-relaxed"
-            style={{ color: "var(--text-muted)" }}
-          >
-            No account needed · Free · Anonymous
-          </p>
+          <div className="mt-6 flex items-center justify-center gap-3 text-xs font-medium">
+            {["No account needed", "Free", "Anonymous"].map((label) => (
+              <span
+                key={label}
+                className="px-3 py-1 rounded-full"
+                style={{
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
