@@ -53,10 +53,13 @@ export async function ensureMp4(
 
     await instance.exec([
       "-i", inputName,
+      // Scale longest side to 720 to keep file small (reduces memory + upload time)
+      "-vf", "scale=if(gte(iw\\,ih)\\,min(1280\\,iw)\\,-2):if(gte(iw\\,ih)\\,-2\\,min(720\\,ih))",
       "-c:v", "libx264",
       "-preset", "ultrafast",
-      "-crf", "28",
+      "-crf", "30",           // slightly lower quality = much smaller file
       "-c:a", "aac",
+      "-b:a", "96k",
       "-movflags", "faststart",
       "output.mp4",
     ]);

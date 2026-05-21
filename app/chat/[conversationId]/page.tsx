@@ -197,6 +197,8 @@ export default function ChatPage() {
         const { ensureMp4 } = await import("@/lib/convert-video");
         file = await ensureMp4(file, (pct) => setConvertPct(pct));
         setConverting(false);
+        // Brief pause so the browser can GC WASM memory before the upload starts
+        await new Promise(r => setTimeout(r, 300));
       }
 
       // Upload directly from browser → Supabase Storage (no Vercel timeout)
@@ -326,7 +328,7 @@ export default function ChatPage() {
               />
             )}
             {msg.file_url && msg.file_type === "video" && (
-              <VideoMessage src={msg.file_url} />
+              <VideoMessage src={msg.file_url} onReady={scrollToBottom} />
             )}
             {msg.content && (
               <p className="text-sm leading-relaxed text-white whitespace-pre-wrap px-2.5 pt-1">
@@ -518,10 +520,8 @@ export default function ChatPage() {
 }
 
 // ─── Video Message — captures first frame as poster so iOS shows a thumbnail ──
-function VideoMessage({ src }: { src: string }) {
+function VideoMessage({ src, onReady }: { src: string; onReady?: () => void }) {
   const [poster, setPoster] = useState<string | undefined>();
-  // Default 9/16 (portrait) so the bubble reserves space before metadata loads.
-  // Updated to the real ratio once the hidden video decodes its dimensions.
   const [ratio, setRatio] = useState("9/16");
 
   useEffect(() => {
@@ -535,7 +535,6 @@ function VideoMessage({ src }: { src: string }) {
 
     const capture = () => {
       if (cancelled || vid.videoWidth === 0) return;
-      // Lock in the real aspect ratio so the bubble never shifts after this
       setRatio(`${vid.videoWidth}/${vid.videoHeight}`);
       try {
         const canvas = document.createElement("canvas");
@@ -547,6 +546,8 @@ function VideoMessage({ src }: { src: string }) {
       } catch {
         // CORS restriction — proceed without poster
       }
+      // Notify parent so it can scroll to bottom after the bubble settles
+      onReady?.();
     };
 
     vid.addEventListener("loadeddata", capture);
@@ -555,7 +556,7 @@ function VideoMessage({ src }: { src: string }) {
     vid.load();
 
     return () => { cancelled = true; };
-  }, [src]);
+  }, [src, onReady]);
 
   return (
     <video
