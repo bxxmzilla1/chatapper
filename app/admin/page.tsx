@@ -664,7 +664,9 @@ export default function AdminPage() {
                         <video
                           src={msg.file_url}
                           controls
-                          className="rounded-xl max-w-full max-h-64 mb-1"
+                          playsInline
+                          preload="metadata"
+                          className="rounded-xl max-w-full max-h-64 mb-1 block"
                         />
                       )}
                       {msg.content && (
