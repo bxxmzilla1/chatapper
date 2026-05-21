@@ -43,7 +43,6 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [apiError, setApiError] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingConvId, setDeletingConvId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -226,18 +225,6 @@ export default function AdminPage() {
       // silently handle
     } finally {
       setDeletingConvId(null);
-    }
-  }
-
-  async function deleteMessage(msgId: string) {
-    setDeletingId(msgId);
-    try {
-      await fetch(`/api/messages/${msgId}`, { method: "DELETE" });
-      setMessages((prev) => prev.filter((m) => m.id !== msgId));
-    } catch {
-      // silently handle
-    } finally {
-      setDeletingId(null);
     }
   }
 
@@ -639,7 +626,7 @@ export default function AdminPage() {
                 return (
                   <div
                     key={msg.id}
-                    className={`group flex flex-col ${
+                    className={`flex flex-col ${
                       isAdmin ? "items-end" : "items-start"
                     } animate-fade-up`}
                   >
@@ -653,63 +640,48 @@ export default function AdminPage() {
                           : selected.user_username}
                       </p>
                     )}
-                    <div className={`flex items-end gap-1.5 max-w-[75%] ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
-                      {/* Bubble */}
-                      <div
-                        className={`rounded-2xl px-4 py-2.5 relative flex-1 ${
-                          isAdmin
-                            ? "bubble-user rounded-br-sm"
-                            : "bubble-admin rounded-bl-sm"
-                        }`}
-                        style={{
-                          background: isAdmin
-                            ? "var(--bubble-user)"
-                            : "var(--bubble-admin)",
-                          opacity: deletingId === msg.id ? 0.4 : 1,
-                          transition: "opacity 0.15s",
-                        }}
-                      >
-                        {msg.file_url && msg.file_type === "image" && (
-                          <img
-                            src={msg.file_url}
-                            alt="shared"
-                            className="rounded-xl max-w-full max-h-64 object-cover mb-1"
-                          />
-                        )}
-                        {msg.file_url && msg.file_type === "video" && (
-                          <video
-                            src={msg.file_url}
-                            controls
-                            className="rounded-xl max-w-full max-h-64 mb-1"
-                          />
-                        )}
-                        {msg.content && (
-                          <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
-                            {msg.content}
-                          </p>
-                        )}
-                        <p
-                          className={`text-xs mt-1 ${
-                            isAdmin ? "text-right" : "text-left"
-                          }`}
-                          style={{ color: "rgba(255,255,255,0.45)" }}
-                        >
-                          {new Date(msg.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 relative ${
+                        isAdmin
+                          ? "bubble-user rounded-br-sm"
+                          : "bubble-admin rounded-bl-sm"
+                      }`}
+                      style={{
+                        background: isAdmin
+                          ? "var(--bubble-user)"
+                          : "var(--bubble-admin)",
+                      }}
+                    >
+                      {msg.file_url && msg.file_type === "image" && (
+                        <img
+                          src={msg.file_url}
+                          alt="shared"
+                          className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+                        />
+                      )}
+                      {msg.file_url && msg.file_type === "video" && (
+                        <video
+                          src={msg.file_url}
+                          controls
+                          className="rounded-xl max-w-full max-h-64 mb-1"
+                        />
+                      )}
+                      {msg.content && (
+                        <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
+                          {msg.content}
                         </p>
-                      </div>
-
-                      {/* Delete button — appears on hover */}
-                      <button
-                        onClick={() => deleteMessage(msg.id)}
-                        disabled={deletingId === msg.id}
-                        className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1.5 rounded-lg transition-all hover:bg-red-900/40 disabled:cursor-not-allowed"
-                        title="Delete message"
+                      )}
+                      <p
+                        className={`text-xs mt-1 ${
+                          isAdmin ? "text-right" : "text-left"
+                        }`}
+                        style={{ color: "rgba(255,255,255,0.45)" }}
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                      </button>
+                        {new Date(msg.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 );
