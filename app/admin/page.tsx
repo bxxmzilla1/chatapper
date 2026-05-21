@@ -598,16 +598,15 @@ export default function AdminPage() {
                     )}
 
                     {/* Row 3: persona + last message */}
-                    <p
-                      className="text-xs truncate mt-0.5"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      <span style={{ color: "var(--accent-light)" }}>
+                    <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                      <span className="text-xs flex-shrink-0" style={{ color: "var(--accent-light)" }}>
                         {conv.admin_username}
                       </span>
-                      {" · "}
-                      {conv.last_message || "No messages yet"}
-                    </p>
+                      {conv.model_slug && <VerifiedBadge size={11} />}
+                      <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                        {" · "}{conv.last_message || "No messages yet"}
+                      </span>
+                    </div>
                   </div>
                 </button>
 
