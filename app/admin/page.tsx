@@ -267,8 +267,8 @@ export default function AdminPage() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
-      style={{ background: "var(--bg)" }}
+      className="page-shell"
+      style={{ background: "var(--bg)", flexDirection: "row" }}
     >
       {/* Sidebar */}
       <div
@@ -280,8 +280,6 @@ export default function AdminPage() {
           borderRight: "1px solid var(--border)",
         }}
       >
-        {/* iOS top safe area */}
-        <div className="safe-area-top" style={{ background: "var(--surface)" }} />
 
         {/* Sidebar header */}
         <div
@@ -486,9 +484,6 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
-            {/* iOS top safe area — chat panel (md+ only, sidebar handles it on mobile) */}
-            <div className="safe-area-top md:block hidden" style={{ background: "var(--surface)" }} />
-
             {/* Chat header */}
             <div
               className="flex items-center gap-3 px-4 py-3"
@@ -739,7 +734,7 @@ export default function AdminPage() {
             {/* Input */}
             <form
               onSubmit={sendMessage}
-              className="px-4 py-3 flex items-end gap-2"
+              className="px-4 pt-3 pb-3 safe-bottom-padding flex items-end gap-2"
               style={{
                 background: "var(--surface)",
                 borderTop: "1px solid var(--border)",
@@ -794,8 +789,6 @@ export default function AdminPage() {
                 <Send className="w-5 h-5 text-white" />
               </button>
             </form>
-            {/* iOS bottom safe area */}
-            <div className="safe-area-bottom" style={{ background: "var(--surface)" }} />
           </>
         )}
       </div>

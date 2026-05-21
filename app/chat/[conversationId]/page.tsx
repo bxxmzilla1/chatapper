@@ -294,12 +294,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div
-      className="flex flex-col h-screen"
-      style={{ background: "var(--bg)" }}
-    >
-      {/* iOS top safe area — matches app bg so status bar floats above header */}
-      <div className="safe-area-top" style={{ background: "var(--bg)" }} />
+    <div className="page-shell" style={{ background: "var(--bg)" }}>
 
       {/* Header */}
       <div
@@ -410,7 +405,7 @@ export default function ChatPage() {
       {/* Input */}
       <form
         onSubmit={sendMessage}
-        className="px-4 py-3 flex items-end gap-2"
+        className="px-4 pt-3 pb-3 safe-bottom-padding flex items-end gap-2"
         style={{
           background: "var(--surface)",
           borderTop: "1px solid var(--border)",
@@ -464,9 +459,6 @@ export default function ChatPage() {
           <Send className="w-5 h-5 text-white" />
         </button>
       </form>
-
-      {/* iOS bottom safe area */}
-      <div className="safe-area-bottom" style={{ background: "var(--surface)" }} />
     </div>
   );
 }

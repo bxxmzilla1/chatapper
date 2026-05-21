@@ -21,20 +21,26 @@
 html,
 body {
   height: 100%;
+  /* Prevent body-level scroll — all scrolling happens inside the message list */
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
 }
 
-/* iOS safe area spacers — use as sibling divs, not padding overrides */
-.safe-area-top {
-  height: env(safe-area-inset-top, 0px);
-  min-height: env(safe-area-inset-top, 0px);
-  flex-shrink: 0;
+/* Full-screen shell — use on every page's outermost div */
+.page-shell {
+  height: 100svh;          /* Fallback for older Safari */
+  height: 100dvh;          /* Dynamic viewport — excludes iOS browser chrome (preferred) */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Top safe area padding: the bg of this element shows behind the status bar */
+  padding-top: env(safe-area-inset-top, 0px);
 }
-.safe-area-bottom {
-  height: env(safe-area-inset-bottom, 0px);
-  min-height: env(safe-area-inset-bottom, 0px);
-  flex-shrink: 0;
+
+/* Apply to the bottommost sticky element (input bar / footer) so it respects home indicator */
+.safe-bottom-padding {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Scrollbar */
