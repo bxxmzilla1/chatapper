@@ -662,7 +662,6 @@ export default function AdminPage() {
                       )}
                       {msg.file_url && msg.file_type === "video" && (
                         <video
-                          src={msg.file_url}
                           controls
                           playsInline
                           preload="metadata"
@@ -670,7 +669,11 @@ export default function AdminPage() {
                           height={720}
                           className="rounded-xl w-full mb-1 block"
                           style={{ maxWidth: "320px", maxHeight: "180px", objectFit: "cover" }}
-                        />
+                        >
+                          <source src={msg.file_url} type="video/mp4" />
+                          <source src={msg.file_url} type="video/quicktime" />
+                          <source src={msg.file_url} type="video/webm" />
+                        </video>
                       )}
                       {msg.content && (
                         <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
@@ -748,7 +751,7 @@ export default function AdminPage() {
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/mp4,video/webm,video/quicktime"
                 className="hidden"
                 onChange={handleFileSelect}
               />
