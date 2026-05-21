@@ -13,6 +13,7 @@ export type Database = {
           user_city: string | null;
           user_country: string | null;
           user_country_code: string | null;
+          model_slug: string | null;
         };
         Insert: {
           id?: string;
@@ -25,6 +26,7 @@ export type Database = {
           user_city?: string | null;
           user_country?: string | null;
           user_country_code?: string | null;
+          model_slug?: string | null;
         };
         Update: {
           id?: string;
@@ -37,6 +39,34 @@ export type Database = {
           user_city?: string | null;
           user_country?: string | null;
           user_country_code?: string | null;
+          model_slug?: string | null;
+        };
+        Relationships: [];
+      };
+      model_profiles: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          avatar_url: string | null;
+          subtitle: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          avatar_url?: string | null;
+          subtitle?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          avatar_url?: string | null;
+          subtitle?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -78,6 +108,6 @@ export type Database = {
   };
 };
 
-export type Conversation =
-  Database["public"]["Tables"]["conversations"]["Row"];
+export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type ModelProfile = Database["public"]["Tables"]["model_profiles"]["Row"];

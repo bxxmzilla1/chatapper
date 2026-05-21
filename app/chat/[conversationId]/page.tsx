@@ -14,6 +14,15 @@ import {
   Heart,
 } from "lucide-react";
 
+function VerifiedBadge({ size = 16 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--accent-light)", flexShrink: 0 }}>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12.01 2.011a3.2 3.2 0 0 1 2.113 .797l.154 .145l.698 .698a1.2 1.2 0 0 0 .71 .341l.135 .008h1a3.2 3.2 0 0 1 3.195 3.018l.005 .182v1c0 .27 .092 .533 .258 .743l.09 .1l.697 .698a3.2 3.2 0 0 1 .147 4.382l-.145 .154l-.698 .698a1.2 1.2 0 0 0 -.341 .71l-.008 .135v1a3.2 3.2 0 0 1 -3.018 3.195l-.182 .005h-1a1.2 1.2 0 0 0 -.743 .258l-.1 .09l-.698 .697a3.2 3.2 0 0 1 -4.382 .147l-.154 -.145l-.698 -.698a1.2 1.2 0 0 0 -.71 -.341l-.135 -.008h-1a3.2 3.2 0 0 1 -3.195 -3.018l-.005 -.182v-1a1.2 1.2 0 0 0 -.258 -.743l-.09 -.1l-.697 -.698a3.2 3.2 0 0 1 -.147 -4.382l.145 -.154l.698 -.698a1.2 1.2 0 0 0 .341 -.71l.008 -.135v-1l.005 -.182a3.2 3.2 0 0 1 3.013 -3.013l.182 -.005h1a1.2 1.2 0 0 0 .743 -.258l.1 -.09l.698 -.697a3.2 3.2 0 0 1 2.269 -.944zm3.697 7.282a1 1 0 0 0 -1.414 0l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.32 1.497l2 2l.094 .083a1 1 0 0 0 1.32 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+    </svg>
+  );
+}
+
 export default function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const searchParams = useSearchParams();
@@ -29,6 +38,7 @@ export default function ChatPage() {
   const [convertPct, setConvertPct] = useState(0);
   const [switching, setSwitching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [modelAvatarUrl, setModelAvatarUrl] = useState<string | null>(null);
   // Tracks all persona names the user has "matched" with in order
   const [matchHistory, setMatchHistory] = useState<string[]>([]);
 
@@ -60,6 +70,13 @@ export default function ChatPage() {
       const data = await res.json();
       setConversation(data);
       setMatchHistory([data.admin_username]);
+      // Fetch model avatar if this chat came from a model page
+      if (data.model_slug) {
+        fetch(`/api/models/${data.model_slug}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
+          .catch(() => {});
+      }
     }
     load();
   }, [conversationId, router]);
@@ -361,11 +378,17 @@ export default function ChatPage() {
         }}
       >
         {/* Avatar */}
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 relative"
-          style={{ background: "var(--accent)" }}
-        >
-          {currentPersona[0]}
+        <div className="relative flex-shrink-0">
+          {modelAvatarUrl ? (
+            <img src={modelAvatarUrl} alt={currentPersona} className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+              style={{ background: "var(--accent)" }}
+            >
+              {currentPersona[0]}
+            </div>
+          )}
           <span
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
             style={{ background: "#22c55e", borderColor: "var(--surface)" }}
@@ -373,7 +396,10 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white truncate">{currentPersona}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="font-semibold text-white truncate">{currentPersona}</p>
+            {conversation?.model_slug && <VerifiedBadge size={16} />}
+          </div>
           <p className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             {isTyping ? (
               <>
@@ -403,13 +429,20 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
-              style={{ background: "var(--surface2)" }}
-            >
-              {currentPersona[0]}
+            {modelAvatarUrl ? (
+              <img src={modelAvatarUrl} alt={currentPersona} className="w-16 h-16 rounded-full object-cover" />
+            ) : (
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
+                style={{ background: "var(--surface2)" }}
+              >
+                {currentPersona[0]}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-white">{currentPersona}</p>
+              {conversation?.model_slug && <VerifiedBadge size={16} />}
             </div>
-            <p className="font-semibold text-white">{currentPersona}</p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {conversation?.user_city
                 ? `Nearby in ${conversation.user_city} · Say hi 👋`

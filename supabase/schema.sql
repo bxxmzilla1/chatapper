@@ -112,3 +112,30 @@ ALTER TABLE public.conversations
   ADD COLUMN IF NOT EXISTS user_city         TEXT,
   ADD COLUMN IF NOT EXISTS user_country      TEXT,
   ADD COLUMN IF NOT EXISTS user_country_code TEXT;
+
+-- ============================================================
+-- MIGRATION 3: Model profiles (custom landing page links)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.model_profiles (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug        TEXT UNIQUE NOT NULL,
+  name        TEXT NOT NULL,
+  avatar_url  TEXT,
+  subtitle    TEXT NOT NULL DEFAULT 'Meet people near you',
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.model_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read model_profiles"
+  ON public.model_profiles FOR SELECT TO anon, authenticated USING (true);
+
+CREATE POLICY "Public insert model_profiles"
+  ON public.model_profiles FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+CREATE POLICY "Public delete model_profiles"
+  ON public.model_profiles FOR DELETE TO anon, authenticated USING (true);
+
+-- Link conversations to which model page generated them
+ALTER TABLE public.conversations
+  ADD COLUMN IF NOT EXISTS model_slug TEXT;

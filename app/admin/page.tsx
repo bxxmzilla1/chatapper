@@ -58,7 +58,7 @@ function VideoMessage({ src }: { src: string }) {
 }
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Conversation, Message } from "@/lib/types";
+import type { Conversation, Message, ModelProfile } from "@/lib/types";
 import {
   LogOut,
   Send,
@@ -70,7 +70,20 @@ import {
   ArrowLeft,
   MapPin,
   Trash2,
+  Link2,
+  Plus,
+  Copy,
+  Check,
 } from "lucide-react";
+
+function VerifiedBadge({ size = 14 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--accent-light)", flexShrink: 0 }}>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12.01 2.011a3.2 3.2 0 0 1 2.113 .797l.154 .145l.698 .698a1.2 1.2 0 0 0 .71 .341l.135 .008h1a3.2 3.2 0 0 1 3.195 3.018l.005 .182v1c0 .27 .092 .533 .258 .743l.09 .1l.697 .698a3.2 3.2 0 0 1 .147 4.382l-.145 .154l-.698 .698a1.2 1.2 0 0 0 -.341 .71l-.008 .135v1a3.2 3.2 0 0 1 -3.018 3.195l-.182 .005h-1a1.2 1.2 0 0 0 -.743 .258l-.1 .09l-.698 .697a3.2 3.2 0 0 1 -4.382 .147l-.154 -.145l-.698 -.698a1.2 1.2 0 0 0 -.71 -.341l-.135 -.008h-1a3.2 3.2 0 0 1 -3.195 -3.018l-.005 -.182v-1a1.2 1.2 0 0 0 -.258 -.743l-.09 -.1l-.697 -.698a3.2 3.2 0 0 1 -.147 -4.382l.145 -.154l.698 -.698a1.2 1.2 0 0 0 .341 -.71l.008 -.135v-1l.005 -.182a3.2 3.2 0 0 1 3.013 -3.013l.182 -.005h1a1.2 1.2 0 0 0 .743 -.258l.1 -.09l.698 -.697a3.2 3.2 0 0 1 2.269 -.944zm3.697 7.282a1 1 0 0 0 -1.414 0l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.32 1.497l2 2l.094 .083a1 1 0 0 0 1.32 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+    </svg>
+  );
+}
 
 function getFlagEmoji(code: string) {
   return code
@@ -98,6 +111,21 @@ export default function AdminPage() {
   const [apiError, setApiError] = useState("");
   const [deletingConvId, setDeletingConvId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Models / Links tab state
+  const [sidebarTab, setSidebarTab] = useState<"chats" | "links">("chats");
+  const [models, setModels] = useState<ModelProfile[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [showNewModel, setShowNewModel] = useState(false);
+  const [newModelName, setNewModelName] = useState("");
+  const [newModelSlug, setNewModelSlug] = useState("");
+  const [newModelSubtitle, setNewModelSubtitle] = useState("Meet people in CITY");
+  const [newModelAvatar, setNewModelAvatar] = useState<File | null>(null);
+  const [newModelAvatarPreview, setNewModelAvatarPreview] = useState<string | null>(null);
+  const [savingModel, setSavingModel] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [deletingModelSlug, setDeletingModelSlug] = useState<string | null>(null);
+  const modelAvatarRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -135,6 +163,68 @@ export default function AdminPage() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const res = await fetch("/api/models");
+      const data = await res.json();
+      setModels(Array.isArray(data) ? data : []);
+    } catch { setModels([]); }
+    finally { setModelsLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (sidebarTab === "links") loadModels();
+  }, [sidebarTab, loadModels]);
+
+  function autoSlug(name: string) {
+    return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  async function handleCreateModel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newModelName.trim() || !newModelSlug.trim()) return;
+    setSavingModel(true);
+    try {
+      let avatar_url: string | null = null;
+      if (newModelAvatar) {
+        const ext = newModelAvatar.name.split(".").pop() ?? "jpg";
+        const path = `models/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("chat-media").upload(path, newModelAvatar, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+          avatar_url = urlData.publicUrl;
+        }
+      }
+      const res = await fetch("/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: newModelSlug.trim(), name: newModelName.trim(), avatar_url, subtitle: newModelSubtitle.trim() }),
+      });
+      if (res.ok) {
+        setShowNewModel(false);
+        setNewModelName(""); setNewModelSlug(""); setNewModelSubtitle("Meet people in CITY");
+        setNewModelAvatar(null); setNewModelAvatarPreview(null);
+        loadModels();
+      }
+    } finally { setSavingModel(false); }
+  }
+
+  async function handleDeleteModel(slug: string) {
+    setDeletingModelSlug(slug);
+    try {
+      await fetch(`/api/models/${slug}`, { method: "DELETE" });
+      setModels(prev => prev.filter(m => m.slug !== slug));
+    } finally { setDeletingModelSlug(null); }
+  }
+
+  function copyLink(slug: string) {
+    const url = `${window.location.origin}/${slug}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedSlug(slug);
+    setTimeout(() => setCopiedSlug(null), 2000);
+  }
 
   // Subscribe to new conversations
   useEffect(() => {
@@ -347,12 +437,7 @@ export default function AdminPage() {
           className="px-4 py-4 flex items-center justify-between"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          <div>
-            <h1 className="font-bold text-lg text-white">Admin Panel</h1>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
-            </p>
-          </div>
+          <h1 className="font-bold text-lg text-white">Admin Panel</h1>
           <button
             onClick={handleLogout}
             className="p-2 rounded-xl transition hover:opacity-70"
@@ -363,6 +448,26 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex px-4 py-3 gap-2" style={{ borderBottom: "1px solid var(--border)" }}>
+          {(["chats", "links"] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setSidebarTab(tab)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition"
+              style={{
+                background: sidebarTab === tab ? "var(--accent)" : "var(--surface2)",
+                color: sidebarTab === tab ? "#fff" : "var(--text-muted)",
+              }}
+            >
+              {tab === "chats" ? <MessageSquare className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+              {tab === "chats" ? "Chats" : "Links"}
+            </button>
+          ))}
+        </div>
+
+        {sidebarTab === "chats" && (
+        <>
         {/* Error banner */}
         {apiError && (
           <div className="mx-4 mt-3 px-3 py-2 rounded-xl text-xs text-red-300 bg-red-900/30 border border-red-800">
@@ -522,6 +627,174 @@ export default function AdminPage() {
             })
           )}
         </div>
+        </>
+        )}
+
+        {/* ── Links / Models tab ── */}
+        {sidebarTab === "links" && (
+          <div className="flex-1 overflow-y-auto">
+            {/* New link button */}
+            <div className="px-4 pt-4 pb-2">
+              <button
+                onClick={() => setShowNewModel(v => !v)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm transition active:scale-[0.98]"
+                style={{ background: "var(--accent)", color: "#fff" }}
+              >
+                <Plus className="w-4 h-4" />
+                New Link
+              </button>
+            </div>
+
+            {/* New link form */}
+            {showNewModel && (
+              <form onSubmit={handleCreateModel} className="mx-4 mb-4 p-4 rounded-2xl flex flex-col gap-3" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                {/* Avatar upload */}
+                <div
+                  className="relative w-20 h-20 rounded-full mx-auto cursor-pointer overflow-hidden flex items-center justify-center"
+                  style={{ background: "var(--surface)", border: "2px dashed var(--border)" }}
+                  onClick={() => modelAvatarRef.current?.click()}
+                >
+                  {newModelAvatarPreview ? (
+                    <img src={newModelAvatarPreview} className="w-full h-full object-cover" alt="avatar" />
+                  ) : (
+                    <span className="text-xs text-center px-1" style={{ color: "var(--text-muted)" }}>Photo</span>
+                  )}
+                  <input
+                    ref={modelAvatarRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setNewModelAvatar(f);
+                      setNewModelAvatarPreview(URL.createObjectURL(f));
+                    }}
+                  />
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Model name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sofia"
+                    value={newModelName}
+                    maxLength={30}
+                    onChange={(e) => {
+                      setNewModelName(e.target.value);
+                      if (!newModelSlug || newModelSlug === autoSlug(newModelName)) {
+                        setNewModelSlug(autoSlug(e.target.value));
+                      }
+                    }}
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  />
+                </div>
+
+                {/* Slug */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>URL slug  <span style={{ color: "var(--accent-light)" }}>/{newModelSlug || "…"}</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. sofia"
+                    value={newModelSlug}
+                    onChange={(e) => setNewModelSlug(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  />
+                </div>
+
+                {/* Subtitle */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Subtitle  <span style={{ opacity: 0.6 }}>(use CITY or COUNTRY)</span></label>
+                  <input
+                    type="text"
+                    value={newModelSubtitle}
+                    onChange={(e) => setNewModelSubtitle(e.target.value)}
+                    placeholder="Meet people in CITY"
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewModel(false)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition"
+                    style={{ background: "var(--surface)", color: "var(--text-muted)" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingModel}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                    style={{ background: "var(--accent)", color: "#fff" }}
+                  >
+                    {savingModel ? "Creating…" : "Create"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Model list */}
+            {modelsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+              </div>
+            ) : models.length === 0 && !showNewModel ? (
+              <div className="flex flex-col items-center py-12 gap-2">
+                <Link2 className="w-8 h-8" style={{ color: "var(--border)" }} />
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No links yet</p>
+              </div>
+            ) : (
+              models.map(m => (
+                <div key={m.slug} className="mx-4 mb-3 p-3 rounded-2xl flex items-center gap-3" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                  {/* Avatar */}
+                  {m.avatar_url ? (
+                    <img src={m.avatar_url} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
+                      {m.name[0]}
+                    </div>
+                  )}
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="font-semibold text-white text-sm truncate">{m.name}</p>
+                      <VerifiedBadge size={14} />
+                    </div>
+                    <p className="text-xs truncate" style={{ color: "var(--accent-light)" }}>/{m.slug}</p>
+                  </div>
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => copyLink(m.slug)}
+                      className="p-1.5 rounded-lg transition hover:opacity-70"
+                      style={{ background: "var(--surface)", color: copiedSlug === m.slug ? "#22c55e" : "var(--text-muted)" }}
+                      title="Copy link"
+                    >
+                      {copiedSlug === m.slug ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteModel(m.slug)}
+                      disabled={deletingModelSlug === m.slug}
+                      className="p-1.5 rounded-lg transition hover:bg-red-900/40 disabled:opacity-40"
+                      style={{ color: "#f87171" }}
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Chat area */}

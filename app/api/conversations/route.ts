@@ -3,14 +3,15 @@ import { createServerClient } from "@/lib/supabase-server";
 import { getRandomGirlName } from "@/lib/girl-names";
 
 export async function POST(req: NextRequest) {
-  const { username, city, country, country_code } = await req.json();
+  const { username, city, country, country_code, model_slug, admin_username } = await req.json();
 
   if (!username || typeof username !== "string" || username.trim() === "") {
     return NextResponse.json({ error: "Username is required" }, { status: 400 });
   }
 
   const supabase = createServerClient();
-  const adminUsername = getRandomGirlName();
+  // Use model's name when coming from a model page, otherwise random girl name
+  const adminUsername = admin_username ?? getRandomGirlName();
 
   const { data, error } = await supabase
     .from("conversations")
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       user_city: city ?? null,
       user_country: country ?? null,
       user_country_code: country_code ?? null,
+      model_slug: model_slug ?? null,
     })
     .select()
     .single();
