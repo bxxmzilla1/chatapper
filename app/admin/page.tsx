@@ -15,7 +15,16 @@ import {
   Search,
   MessageSquare,
   ArrowLeft,
+  MapPin,
 } from "lucide-react";
+
+function getFlagEmoji(code: string) {
+  return code
+    .toUpperCase()
+    .split("")
+    .map((c) => String.fromCodePoint(0x1f1e6 - 65 + c.charCodeAt(0)))
+    .join("");
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -306,63 +315,87 @@ export default function AdminPage() {
               </p>
             </div>
           ) : (
-            filtered.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => selectConv(conv)}
-                className="w-full flex items-center gap-3 px-4 py-3 transition text-left"
-                style={{
-                  background:
-                    selected?.id === conv.id
-                      ? "var(--surface2)"
-                      : "transparent",
-                  borderLeft:
-                    selected?.id === conv.id
+            filtered.map((conv) => {
+              const isSelected = selected?.id === conv.id;
+              const locationLabel = conv.user_city && conv.user_country
+                ? `${conv.user_city}, ${conv.user_country}`
+                : conv.user_country ?? null;
+              const flag = conv.user_country_code
+                ? getFlagEmoji(conv.user_country_code)
+                : "";
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => selectConv(conv)}
+                  className="w-full flex items-start gap-3 px-4 py-3.5 transition text-left"
+                  style={{
+                    background: isSelected ? "var(--surface2)" : "transparent",
+                    borderLeft: isSelected
                       ? "3px solid var(--accent)"
                       : "3px solid transparent",
-                }}
-              >
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 text-sm"
-                  style={{ background: "var(--accent)" }}
+                  }}
                 >
-                  {conv.user_username[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-white text-sm truncate">
-                      {conv.user_username}
-                    </p>
-                    <span
-                      className="text-xs flex-shrink-0 ml-2"
-                      style={{ color: "var(--text-muted)" }}
+                  {/* Avatar with unread dot */}
+                  <div className="relative flex-shrink-0 mt-0.5">
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                      style={{ background: "var(--accent)" }}
                     >
-                      {formatTime(conv.last_message_at)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p
-                      className="text-xs truncate"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      as{" "}
-                      <span style={{ color: "var(--accent-light)" }}>
-                        {conv.admin_username}
-                      </span>{" "}
-                      · {conv.last_message || "No messages yet"}
-                    </p>
+                      {conv.user_username[0].toUpperCase()}
+                    </div>
                     {conv.unread_count > 0 && (
                       <span
-                        className="ml-2 flex-shrink-0 text-xs font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                        style={{ background: "var(--accent)" }}
+                        className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                        style={{ background: "#ec4899" }}
                       >
-                        {conv.unread_count}
+                        {conv.unread_count > 9 ? "9+" : conv.unread_count}
                       </span>
                     )}
                   </div>
-                </div>
-              </button>
-            ))
+
+                  <div className="flex-1 min-w-0">
+                    {/* Row 1: name + time */}
+                    <div className="flex items-center justify-between gap-2">
+                      <p
+                        className="font-semibold text-sm truncate text-white"
+                        style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
+                      >
+                        {conv.user_username}
+                      </p>
+                      <span
+                        className="text-xs flex-shrink-0"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {formatTime(conv.last_message_at)}
+                      </span>
+                    </div>
+
+                    {/* Row 2: location badge */}
+                    {locationLabel && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: "#f472b6" }} />
+                        <span className="text-xs truncate" style={{ color: "#f472b6" }}>
+                          {flag && <span className="mr-0.5">{flag}</span>}
+                          {locationLabel}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Row 3: persona + last message */}
+                    <p
+                      className="text-xs truncate mt-0.5"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      <span style={{ color: "var(--accent-light)" }}>
+                        {conv.admin_username}
+                      </span>
+                      {" · "}
+                      {conv.last_message || "No messages yet"}
+                    </p>
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </div>
@@ -410,13 +443,29 @@ export default function AdminPage() {
                 {selected.user_username[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white truncate">
-                  {selected.user_username}
-                </p>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Replying as{" "}
-                  <span style={{ color: "var(--accent-light)" }}>
-                    {selected.admin_username}
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-white truncate">
+                    {selected.user_username}
+                  </p>
+                  {selected.user_country_code && (
+                    <span className="text-sm flex-shrink-0">
+                      {getFlagEmoji(selected.user_country_code)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs flex items-center gap-1.5 flex-wrap" style={{ color: "var(--text-muted)" }}>
+                  {selected.user_city && (
+                    <span className="flex items-center gap-0.5" style={{ color: "#f472b6" }}>
+                      <MapPin className="w-2.5 h-2.5" />
+                      {selected.user_city}{selected.user_country ? `, ${selected.user_country}` : ""}
+                    </span>
+                  )}
+                  {selected.user_city && <span>·</span>}
+                  <span>
+                    Replying as{" "}
+                    <span style={{ color: "var(--accent-light)" }}>
+                      {selected.admin_username}
+                    </span>
                   </span>
                 </p>
               </div>

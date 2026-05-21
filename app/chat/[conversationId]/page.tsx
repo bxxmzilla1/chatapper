@@ -329,14 +329,22 @@ export default function ChatPage() {
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white truncate">{currentPersona}</p>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          <p className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             {isTyping ? (
-              <span className="flex items-center gap-1">
+              <>
                 <Circle className="w-2 h-2 fill-green-400 text-green-400" />
                 typing…
-              </span>
+              </>
+            ) : conversation?.user_city ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                Nearby in {conversation.user_city}
+              </>
             ) : (
-              "Online"
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                Online · Nearby
+              </>
             )}
           </p>
         </div>
@@ -366,7 +374,9 @@ export default function ChatPage() {
             </div>
             <p className="font-semibold text-white">{currentPersona}</p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              You&apos;ve been matched! Say hi 👋
+              {conversation?.user_city
+                ? `Someone nearby in ${conversation.user_city} · Say hi 👋`
+                : "You've been matched with someone nearby · Say hi 👋"}
             </p>
           </div>
         )}
@@ -522,11 +532,11 @@ function MatchSwitchCard({ name, time }: { name: string; time: string }) {
         </div>
         <p className="font-semibold text-white text-sm">{name}</p>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          matched with you · {new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          nearby match · {new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </p>
         <div className="flex items-center gap-1 mt-1">
           <span className="w-2 h-2 rounded-full bg-green-400" />
-          <span className="text-xs text-green-400">Online now</span>
+          <span className="text-xs text-green-400">Online · Nearby</span>
         </div>
       </div>
     </div>

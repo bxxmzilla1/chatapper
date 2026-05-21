@@ -47,7 +47,12 @@ export default function LandingPage() {
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmed }),
+        body: JSON.stringify({
+          username: trimmed,
+          city: location?.city ?? null,
+          country: location?.country ?? null,
+          country_code: location?.country_code ?? null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start");

@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase-server";
 import { getRandomGirlName } from "@/lib/girl-names";
 
 export async function POST(req: NextRequest) {
-  const { username } = await req.json();
+  const { username, city, country, country_code } = await req.json();
 
   if (!username || typeof username !== "string" || username.trim() === "") {
     return NextResponse.json({ error: "Username is required" }, { status: 400 });
@@ -17,6 +17,9 @@ export async function POST(req: NextRequest) {
     .insert({
       user_username: username.trim(),
       admin_username: adminUsername,
+      user_city: city ?? null,
+      user_country: country ?? null,
+      user_country_code: country_code ?? null,
     })
     .select()
     .single();

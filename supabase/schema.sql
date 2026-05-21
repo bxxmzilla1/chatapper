@@ -95,7 +95,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 
 -- ============================================================
--- MIGRATION: Run this if you already ran the schema above
+-- MIGRATION 1: Run this if you already ran the schema above
 -- Adds 'system' sender_type for match-switch events
 -- ============================================================
 ALTER TABLE public.messages
@@ -104,3 +104,11 @@ ALTER TABLE public.messages
 ALTER TABLE public.messages
   ADD CONSTRAINT messages_sender_type_check
   CHECK (sender_type IN ('user', 'admin', 'system'));
+
+-- ============================================================
+-- MIGRATION 2: Add user location columns to conversations
+-- ============================================================
+ALTER TABLE public.conversations
+  ADD COLUMN IF NOT EXISTS user_city         TEXT,
+  ADD COLUMN IF NOT EXISTS user_country      TEXT,
+  ADD COLUMN IF NOT EXISTS user_country_code TEXT;
