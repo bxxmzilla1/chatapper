@@ -169,3 +169,9 @@ CREATE POLICY "Public delete model_profiles"
 -- Link conversations to which model page generated them
 ALTER TABLE public.conversations
   ADD COLUMN IF NOT EXISTS model_slug TEXT;
+
+-- ============================================================
+-- MIGRATION 4: Redirect URL for model profiles
+-- ============================================================
+ALTER TABLE public.model_profiles
+  ADD COLUMN IF NOT EXISTS redirect_url TEXT;

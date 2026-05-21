@@ -125,6 +125,14 @@ export default function AdminPage() {
   const [savingModel, setSavingModel] = useState(false);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [deletingModelSlug, setDeletingModelSlug] = useState<string | null>(null);
+  // Redirect editing
+  const [editingRedirectSlug, setEditingRedirectSlug] = useState<string | null>(null);
+  const [editRedirectUrl, setEditRedirectUrl] = useState("");
+  const [savingRedirect, setSavingRedirect] = useState(false);
+  // Duplicate
+  const [duplicatingSlug, setDuplicatingSlug] = useState<string | null>(null);
+  const [duplicateNewSlug, setDuplicateNewSlug] = useState("");
+  const [savingDuplicate, setSavingDuplicate] = useState(false);
   const modelAvatarRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -236,6 +244,56 @@ export default function AdminPage() {
     navigator.clipboard.writeText(url).catch(() => {});
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(null), 2000);
+  }
+
+  function openEditRedirect(m: ModelProfile) {
+    setEditingRedirectSlug(m.slug);
+    setEditRedirectUrl(m.redirect_url ?? "");
+    setDuplicatingSlug(null);
+  }
+
+  async function saveRedirect(slug: string) {
+    setSavingRedirect(true);
+    try {
+      const res = await fetch(`/api/models/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ redirect_url: editRedirectUrl.trim() || null }),
+      });
+      if (res.ok) {
+        const updated: ModelProfile = await res.json();
+        setModels(prev => prev.map(m => m.slug === slug ? updated : m));
+        setEditingRedirectSlug(null);
+      }
+    } finally { setSavingRedirect(false); }
+  }
+
+  function openDuplicate(m: ModelProfile) {
+    setDuplicatingSlug(m.slug);
+    setDuplicateNewSlug(`${m.slug}-copy`);
+    setEditingRedirectSlug(null);
+  }
+
+  async function saveDuplicate(original: ModelProfile) {
+    const newSlug = duplicateNewSlug.trim();
+    if (!newSlug) return;
+    setSavingDuplicate(true);
+    try {
+      const res = await fetch("/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: newSlug,
+          name: original.name,
+          avatar_url: original.avatar_url,
+          subtitle: original.subtitle,
+        }),
+      });
+      if (res.ok) {
+        setDuplicatingSlug(null);
+        loadModels();
+      }
+    } finally { setSavingDuplicate(false); }
   }
 
   // Subscribe to new conversations
@@ -764,43 +822,131 @@ export default function AdminPage() {
               </div>
             ) : (
               models.map(m => (
-                <div key={m.slug} className="mx-4 mb-3 p-3 rounded-2xl flex items-center gap-3" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                  {/* Avatar */}
-                  {m.avatar_url ? (
-                    <img src={m.avatar_url} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
-                      {m.name[0]}
+                <div key={m.slug} className="mx-4 mb-3 rounded-2xl overflow-hidden" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                  {/* Main row */}
+                  <div className="p-3 flex items-center gap-3">
+                    {/* Avatar */}
+                    {m.avatar_url ? (
+                      <img src={m.avatar_url} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
+                        {m.name[0]}
+                      </div>
+                    )}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <p className="font-semibold text-white text-sm truncate">{m.name}</p>
+                        <VerifiedBadge size={14} />
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-xs truncate" style={{ color: "var(--accent-light)" }}>/{m.slug}</p>
+                        {/* Mode badge */}
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium"
+                          style={{
+                            background: m.redirect_url ? "rgba(251,191,36,0.15)" : "rgba(124,58,237,0.15)",
+                            color: m.redirect_url ? "#fbbf24" : "var(--accent-light)",
+                          }}
+                        >
+                          {m.redirect_url ? "↗ Redirect" : "🌐 Page"}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {/* Copy */}
+                      <button onClick={() => copyLink(m.slug)} className="p-1.5 rounded-lg transition hover:opacity-70"
+                        style={{ background: "var(--surface)", color: copiedSlug === m.slug ? "#22c55e" : "var(--text-muted)" }} title="Copy link">
+                        {copiedSlug === m.slug ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                      {/* Redirect toggle */}
+                      <button
+                        onClick={() => editingRedirectSlug === m.slug ? setEditingRedirectSlug(null) : openEditRedirect(m)}
+                        className="p-1.5 rounded-lg transition hover:opacity-70"
+                        style={{ background: editingRedirectSlug === m.slug ? "var(--accent)" : "var(--surface)", color: editingRedirectSlug === m.slug ? "#fff" : "var(--text-muted)" }}
+                        title="Set redirect URL"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                        </svg>
+                      </button>
+                      {/* Duplicate */}
+                      <button
+                        onClick={() => duplicatingSlug === m.slug ? setDuplicatingSlug(null) : openDuplicate(m)}
+                        className="p-1.5 rounded-lg transition hover:opacity-70"
+                        style={{ background: duplicatingSlug === m.slug ? "var(--accent)" : "var(--surface)", color: duplicatingSlug === m.slug ? "#fff" : "var(--text-muted)" }}
+                        title="Duplicate link"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                        </svg>
+                      </button>
+                      {/* Delete */}
+                      <button onClick={() => handleDeleteModel(m.slug)} disabled={deletingModelSlug === m.slug}
+                        className="p-1.5 rounded-lg transition hover:bg-red-900/40 disabled:opacity-40" style={{ color: "#f87171" }} title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Redirect edit panel */}
+                  {editingRedirectSlug === m.slug && (
+                    <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p className="text-xs pt-2 font-medium" style={{ color: "var(--text-muted)" }}>
+                        Redirect URL — leave empty to use the landing page
+                      </p>
+                      <input
+                        type="url"
+                        value={editRedirectUrl}
+                        onChange={e => setEditRedirectUrl(e.target.value)}
+                        placeholder="https://example.com/…"
+                        className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingRedirectSlug(null)}
+                          className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                          Cancel
+                        </button>
+                        <button onClick={() => saveRedirect(m.slug)} disabled={savingRedirect}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
+                          style={{ background: "var(--accent)", color: "#fff" }}>
+                          {savingRedirect ? "Saving…" : editRedirectUrl.trim() ? "Set Redirect" : "Use Landing Page"}
+                        </button>
+                      </div>
                     </div>
                   )}
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p className="font-semibold text-white text-sm truncate">{m.name}</p>
-                      <VerifiedBadge size={14} />
+
+                  {/* Duplicate panel */}
+                  {duplicatingSlug === m.slug && (
+                    <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p className="text-xs pt-2 font-medium" style={{ color: "var(--text-muted)" }}>
+                        New URL slug for the duplicate
+                      </p>
+                      <input
+                        type="text"
+                        value={duplicateNewSlug}
+                        onChange={e => setDuplicateNewSlug(e.target.value)}
+                        placeholder="e.g. sofia-2"
+                        className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setDuplicatingSlug(null)}
+                          className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                          Cancel
+                        </button>
+                        <button onClick={() => saveDuplicate(m)} disabled={savingDuplicate || !duplicateNewSlug.trim()}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
+                          style={{ background: "var(--accent)", color: "#fff" }}>
+                          {savingDuplicate ? "Creating…" : "Duplicate"}
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs truncate" style={{ color: "var(--accent-light)" }}>/{m.slug}</p>
-                  </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      onClick={() => copyLink(m.slug)}
-                      className="p-1.5 rounded-lg transition hover:opacity-70"
-                      style={{ background: "var(--surface)", color: copiedSlug === m.slug ? "#22c55e" : "var(--text-muted)" }}
-                      title="Copy link"
-                    >
-                      {copiedSlug === m.slug ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteModel(m.slug)}
-                      disabled={deletingModelSlug === m.slug}
-                      className="p-1.5 rounded-lg transition hover:bg-red-900/40 disabled:opacity-40"
-                      style={{ color: "#f87171" }}
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               ))
             )}

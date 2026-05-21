@@ -38,7 +38,14 @@ export default function ModelLandingPage() {
     if (!slug) return;
     fetch(`/api/models/${slug}`)
       .then(r => { if (!r.ok) { setNotFound(true); return null; } return r.json(); })
-      .then(data => { if (data) setModel(data); })
+      .then(data => {
+        if (!data) return;
+        if (data.redirect_url) {
+          window.location.replace(data.redirect_url);
+          return;
+        }
+        setModel(data);
+      })
       .catch(() => setNotFound(true));
   }, [slug]);
 

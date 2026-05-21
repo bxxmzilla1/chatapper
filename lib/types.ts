@@ -50,6 +50,7 @@ export type Database = {
           name: string;
           avatar_url: string | null;
           subtitle: string;
+          redirect_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -58,6 +59,7 @@ export type Database = {
           name: string;
           avatar_url?: string | null;
           subtitle?: string;
+          redirect_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -66,6 +68,7 @@ export type Database = {
           name?: string;
           avatar_url?: string | null;
           subtitle?: string;
+          redirect_url?: string | null;
           created_at?: string;
         };
         Relationships: [];
