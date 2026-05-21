@@ -266,14 +266,16 @@ export default function AdminPage() {
       if (res.ok) {
         const updated: ModelProfile = await res.json();
         setModels(prev => prev.map(m => m.slug === slug ? updated : m));
-        setEditingRedirectSlug(null);
+        // Don't close the panel — user may want to keep editing
       }
     } finally { setSavingRedirect(false); }
   }
 
-  function handleRedirectToggle() {
-    // Just show/hide the URL input — never auto-saves
-    setRedirectToggleOn(v => !v);
+  async function handleRedirectToggle(m: ModelProfile) {
+    const turningOn = !redirectToggleOn;
+    setRedirectToggleOn(turningOn);
+    // Toggle ON → save the typed URL; Toggle OFF → save null (keeps URL in input)
+    await patchRedirectUrl(m.slug, turningOn ? (editRedirectUrl.trim() || null) : null);
   }
 
   function openDuplicate(m: ModelProfile) {
@@ -912,7 +914,7 @@ export default function AdminPage() {
                         </div>
                         {/* iOS-style toggle */}
                         <button
-                          onClick={() => handleRedirectToggle()}
+                          onClick={() => handleRedirectToggle(m)}
                           disabled={savingRedirect}
                           className="relative flex-shrink-0 w-12 h-6 rounded-full transition-all duration-200 disabled:opacity-50"
                           style={{ background: redirectToggleOn ? "#f59e0b" : "var(--surface)" }}
@@ -924,32 +926,26 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      {/* URL input — always visible so it's never lost */}
-                      <input
-                        type="url"
-                        value={editRedirectUrl}
-                        onChange={e => setEditRedirectUrl(e.target.value)}
-                        placeholder="https://example.com/…"
-                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                        style={{
-                          background: "var(--surface)",
-                          border: `1px solid ${redirectToggleOn ? "#f59e0b55" : "var(--border)"}`,
-                          color: redirectToggleOn ? "var(--text)" : "var(--text-muted)",
-                          opacity: redirectToggleOn ? 1 : 0.5,
-                        }}
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => setEditingRedirectSlug(null)}
-                          className="flex-1 py-2 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => patchRedirectUrl(m.slug, redirectToggleOn && editRedirectUrl.trim() ? editRedirectUrl.trim() : null)}
-                          disabled={savingRedirect}
-                          className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
-                          style={{ background: "#f59e0b", color: "#000" }}>
-                          {savingRedirect ? "Saving…" : redirectToggleOn && editRedirectUrl.trim() ? "Set Redirect" : "Use Landing Page"}
-                        </button>
+                      {/* URL input — always visible, URL is never lost on toggle */}
+                      <div className="relative">
+                        <input
+                          type="url"
+                          value={editRedirectUrl}
+                          onChange={e => setEditRedirectUrl(e.target.value)}
+                          placeholder="https://example.com/…"
+                          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none pr-16"
+                          style={{
+                            background: "var(--surface)",
+                            border: `1px solid ${redirectToggleOn ? "#f59e0b55" : "var(--border)"}`,
+                            color: redirectToggleOn ? "var(--text)" : "var(--text-muted)",
+                            opacity: redirectToggleOn ? 1 : 0.6,
+                          }}
+                        />
+                        {savingRedirect && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs" style={{ color: "var(--text-muted)" }}>
+                            Saving…
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
