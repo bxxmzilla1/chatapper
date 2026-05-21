@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
   const { data, error } = await supabase
     .from("model_profiles")
     .update({
+      ...("slug" in body ? { slug: body.slug as string } : {}),
       ...("redirect_url" in body ? { redirect_url: (body.redirect_url as string | null) ?? null } : {}),
       ...("name" in body ? { name: body.name as string } : {}),
       ...("subtitle" in body ? { subtitle: body.subtitle as string } : {}),
