@@ -288,7 +288,10 @@ export default function ChatPage() {
                 controls
                 playsInline
                 preload="metadata"
-                className="rounded-xl max-w-full max-h-64 mb-1 block"
+                width={1280}
+                height={720}
+                className="rounded-xl w-full mb-1 block"
+                style={{ maxWidth: "320px", maxHeight: "180px", objectFit: "cover" }}
               />
             )}
             {msg.content && (
