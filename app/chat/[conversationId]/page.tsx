@@ -7,7 +7,6 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
 import {
-  ArrowLeft,
   Send,
   Paperclip,
   Circle,
@@ -353,14 +352,6 @@ export default function ChatPage() {
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <button
-          onClick={() => router.push("/")}
-          className="p-2 rounded-xl transition hover:opacity-70"
-          style={{ background: "var(--surface2)" }}
-        >
-          <ArrowLeft className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
-        </button>
-
         {/* Avatar */}
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 relative"
