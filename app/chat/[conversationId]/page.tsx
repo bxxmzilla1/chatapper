@@ -206,11 +206,24 @@ export default function ChatPage() {
   // Current active persona name (last in match history or from conversation)
   const currentPersona = conversation?.admin_username ?? matchHistory[matchHistory.length - 1] ?? "…";
 
-  // Render messages, injecting persona switch cards from system messages
+  // Render messages — only show messages AFTER the last SWITCH (user only sees current session)
   function renderMessages() {
     const items: React.ReactNode[] = [];
 
+    // Find the index of the last SWITCH system message
+    let lastSwitchIdx = -1;
     messages.forEach((msg, i) => {
+      if (msg.sender_type === "system" && msg.content?.startsWith("SWITCH:")) {
+        lastSwitchIdx = i;
+      }
+    });
+
+    // Only render from the last switch point (or from the beginning if no switch)
+    const visibleMessages = lastSwitchIdx === -1
+      ? messages
+      : messages.slice(lastSwitchIdx); // includes the SWITCH message itself (rendered as match card)
+
+    visibleMessages.forEach((msg, i) => {
       if (msg.sender_type === "system" && msg.content?.startsWith("SWITCH:")) {
         const newName = msg.content.replace("SWITCH:", "");
         items.push(
@@ -220,23 +233,12 @@ export default function ChatPage() {
       }
 
       const isUser = msg.sender_type === "user";
-      const prevMsg = messages[i - 1];
-      // Find the current admin name at this point in time (latest SWITCH before this message)
-      let adminNameAtPoint = matchHistory[0] ?? currentPersona;
-      for (let j = 0; j <= i; j++) {
-        if (
-          messages[j].sender_type === "system" &&
-          messages[j].content?.startsWith("SWITCH:")
-        ) {
-          adminNameAtPoint = messages[j].content!.replace("SWITCH:", "");
-        }
-      }
+      const prevMsg = visibleMessages[i - 1];
 
       const showName =
         !isUser &&
         msg.sender_type === "admin" &&
-        (i === 0 ||
-          prevMsg?.sender_type !== "admin");
+        (i === 0 || prevMsg?.sender_type !== "admin");
 
       items.push(
         <div
@@ -248,7 +250,7 @@ export default function ChatPage() {
               className="text-xs mb-1 px-1"
               style={{ color: "var(--text-muted)" }}
             >
-              {adminNameAtPoint}
+              {currentPersona}
             </p>
           )}
           <div
@@ -354,7 +356,7 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-        {messages.filter(m => m.sender_type !== "system").length === 0 && (
+        {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
