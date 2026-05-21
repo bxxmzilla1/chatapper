@@ -35,6 +35,15 @@ export default function ChatPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-resize textarea up to ~5 lines, then scroll inside
+  const MAX_TEXTAREA_HEIGHT = 140; // px ≈ 5–6 lines
+  function resizeTextarea() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT) + "px";
+  }
+
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -121,10 +130,12 @@ export default function ChatPage() {
     if (!trimmed) return;
     if (sending || uploading) return;
     setSending(true);
-    // Clear immediately so the UI feels instant
+    // Clear + shrink immediately so the UI feels instant
     setInput("");
-    // Keep keyboard open
-    textareaRef.current?.focus();
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
+    }
 
     try {
       await fetch("/api/messages", {
@@ -432,7 +443,7 @@ export default function ChatPage() {
         </button>
 
         <div
-          className="flex-1 flex items-end rounded-2xl px-4 py-2.5 min-h-[48px]"
+          className="flex-1 flex items-end rounded-2xl px-4 py-2.5"
           style={{
             background: "var(--surface2)",
             border: "1px solid var(--border)",
@@ -441,11 +452,18 @@ export default function ChatPage() {
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              resizeTextarea();
+            }}
             placeholder="Message…"
             rows={1}
-            className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed max-h-32 overflow-y-auto"
-            style={{ color: "var(--text)" }}
+            className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed overflow-y-auto w-full"
+            style={{
+              color: "var(--text)",
+              minHeight: "24px",
+              maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
+            }}
           />
         </div>
 
