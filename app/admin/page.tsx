@@ -139,6 +139,7 @@ export default function AdminPage() {
   // Edit model profile
   const [editingModelSlug, setEditingModelSlug] = useState<string | null>(null);
   const [editModelName, setEditModelName] = useState("");
+  const [editModelSlug, setEditModelSlug] = useState("");
   const [editModelSubtitle, setEditModelSubtitle] = useState("");
   const [editModelAvatar, setEditModelAvatar] = useState<File | null>(null);
   const [editModelAvatarPreview, setEditModelAvatarPreview] = useState<string | null>(null);
@@ -318,6 +319,7 @@ export default function AdminPage() {
   function openEditModel(m: ModelProfile) {
     setEditingModelSlug(m.slug);
     setEditModelName(m.name);
+    setEditModelSlug(m.slug);
     setEditModelSubtitle(m.subtitle);
     setEditModelAvatarPreview(m.avatar_url);
     setEditModelAvatar(null);
@@ -339,10 +341,12 @@ export default function AdminPage() {
           avatar_url = urlData.publicUrl;
         }
       }
+      const newSlug = editModelSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || m.slug;
       const res = await fetch(`/api/models/${m.slug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          slug: newSlug,
           name: editModelName.trim() || m.name,
           subtitle: editModelSubtitle.trim() || m.subtitle,
           avatar_url,
@@ -1078,6 +1082,20 @@ export default function AdminPage() {
                           value={editModelName}
                           maxLength={30}
                           onChange={e => setEditModelName(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      {/* Slug / URL */}
+                      <div>
+                        <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>
+                          URL  <span style={{ color: "var(--accent-light)" }}>/{editModelSlug || "…"}</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editModelSlug}
+                          onChange={e => setEditModelSlug(e.target.value)}
                           className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                           style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
                         />
