@@ -34,30 +34,42 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 -- Allow anyone to insert a new conversation (starting a chat)
+DROP POLICY IF EXISTS "Public insert conversations" ON public.conversations;
 CREATE POLICY "Public insert conversations"
   ON public.conversations FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
 
 -- Allow reading conversations (required for realtime)
+DROP POLICY IF EXISTS "Public read conversations" ON public.conversations;
 CREATE POLICY "Public read conversations"
   ON public.conversations FOR SELECT
   TO anon, authenticated
   USING (true);
 
 -- Allow updating conversations (unread count, last message)
+DROP POLICY IF EXISTS "Public update conversations" ON public.conversations;
 CREATE POLICY "Public update conversations"
   ON public.conversations FOR UPDATE
   TO anon, authenticated
   USING (true);
 
+-- Allow deleting conversations (admin delete chat)
+DROP POLICY IF EXISTS "Public delete conversations" ON public.conversations;
+CREATE POLICY "Public delete conversations"
+  ON public.conversations FOR DELETE
+  TO anon, authenticated
+  USING (true);
+
 -- Allow inserting messages
+DROP POLICY IF EXISTS "Public insert messages" ON public.messages;
 CREATE POLICY "Public insert messages"
   ON public.messages FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
 
 -- Allow reading messages
+DROP POLICY IF EXISTS "Public read messages" ON public.messages;
 CREATE POLICY "Public read messages"
   ON public.messages FOR SELECT
   TO anon, authenticated
@@ -76,12 +88,14 @@ VALUES (
 ON CONFLICT DO NOTHING;
 
 -- Storage policy: allow public uploads
+DROP POLICY IF EXISTS "Public upload chat-media" ON storage.objects;
 CREATE POLICY "Public upload chat-media"
   ON storage.objects FOR INSERT
   TO anon, authenticated
   WITH CHECK (bucket_id = 'chat-media');
 
 -- Storage policy: allow public reads
+DROP POLICY IF EXISTS "Public read chat-media" ON storage.objects;
 CREATE POLICY "Public read chat-media"
   ON storage.objects FOR SELECT
   TO anon, authenticated
@@ -127,12 +141,15 @@ CREATE TABLE IF NOT EXISTS public.model_profiles (
 
 ALTER TABLE public.model_profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read model_profiles" ON public.model_profiles;
 CREATE POLICY "Public read model_profiles"
   ON public.model_profiles FOR SELECT TO anon, authenticated USING (true);
 
+DROP POLICY IF EXISTS "Public insert model_profiles" ON public.model_profiles;
 CREATE POLICY "Public insert model_profiles"
   ON public.model_profiles FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public delete model_profiles" ON public.model_profiles;
 CREATE POLICY "Public delete model_profiles"
   ON public.model_profiles FOR DELETE TO anon, authenticated USING (true);
 
