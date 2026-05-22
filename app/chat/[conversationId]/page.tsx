@@ -18,7 +18,6 @@ import {
   Send,
   Paperclip,
   Circle,
-  Shuffle,
   Heart,
 } from "lucide-react";
 
@@ -425,17 +424,6 @@ export default function ChatPage() {
           </p>
         </div>
 
-        {/* New Match button */}
-        <button
-          onClick={handleSwitchMatch}
-          disabled={switching}
-          title="Find a new match"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition active:scale-95 disabled:opacity-50"
-          style={{ background: "var(--surface2)", color: "var(--accent-light)" }}
-        >
-          <Shuffle className={`w-4 h-4 ${switching ? "animate-spin" : ""}`} />
-          {switching ? "Matching…" : "New Match"}
-        </button>
       </div>
 
       {/* Messages */}
