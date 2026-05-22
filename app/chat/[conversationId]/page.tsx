@@ -360,13 +360,13 @@ export default function ChatPage() {
               <VideoMessage src={msg.file_url} onReady={scrollToBottom} />
             )}
             {msg.content && (
-              <p className="text-sm leading-relaxed text-white whitespace-pre-wrap px-2.5 pt-1">
-                {linkifyText(msg.content)}
+              <p className={`text-sm leading-relaxed whitespace-pre-wrap px-2.5 pt-1 ${isUser ? "text-black" : "text-white"}`}>
+                {linkifyText(msg.content, isUser)}
               </p>
             )}
             <p
               className={`text-xs px-2.5 pb-1 pt-0.5 ${msg.file_url && !msg.content ? "text-right" : isUser ? "text-right" : "text-left"}`}
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: isUser ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.55)" }}
             >
               {formatTime(msg.created_at)}
             </p>
@@ -395,7 +395,7 @@ export default function ChatPage() {
             <img src={optimizeAvatarUrl(modelAvatarUrl) ?? ""} alt={currentPersona} className="w-10 h-10 rounded-full object-cover" />
           ) : (
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold text-sm"
               style={{ background: "var(--accent)" }}
             >
               {currentPersona[0]}
@@ -546,7 +546,7 @@ export default function ChatPage() {
           className="p-3 rounded-xl flex-shrink-0 transition active:scale-95 disabled:opacity-40"
           style={{ background: "var(--accent)" }}
         >
-          <Send className="w-5 h-5 text-white" />
+          <Send className="w-5 h-5 text-black" />
         </button>
       </form>
     </div>
@@ -635,7 +635,7 @@ function MatchSwitchCard({ name, time }: { name: string; time: string }) {
         }}
       >
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-black"
           style={{ background: "var(--accent)" }}
         >
           {name[0]}

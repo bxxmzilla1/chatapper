@@ -89,15 +89,15 @@ export default function LandingPage() {
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
               style={{
-                background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-                boxShadow: "0 0 32px rgba(124,58,237,0.35)",
+                background: "#fffc00",
+                boxShadow: "0 0 32px rgba(255,252,0,0.35)",
               }}
             >
               {/* Minimal chat icon */}
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  stroke="white"
+                  stroke="#0a0a0a"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -162,12 +162,11 @@ export default function LandingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-2xl font-semibold text-white text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{
-                  background: loading
-                    ? "var(--surface)"
-                    : "linear-gradient(135deg, #7c3aed, #9333ea)",
-                  boxShadow: loading ? "none" : "0 4px 24px rgba(124,58,237,0.4)",
+                  background: loading ? "var(--surface)" : "#fffc00",
+                  color: loading ? "var(--text)" : "#0a0a0a",
+                  boxShadow: loading ? "none" : "0 4px 24px rgba(255,252,0,0.35)",
                 }}
               >
                 {loading ? (

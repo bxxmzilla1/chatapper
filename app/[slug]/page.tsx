@@ -136,12 +136,12 @@ export default function ModelLandingPage() {
                   height={420}
                   priority
                   className="w-24 h-24 rounded-full object-cover"
-                  style={{ border: "3px solid var(--accent)", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}
+                  style={{ border: "3px solid var(--accent)", boxShadow: "0 0 32px rgba(255,252,0,0.4)" }}
                 />
               ) : (
                 <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", border: "3px solid var(--accent)", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-black"
+                  style={{ background: "#fffc00", border: "3px solid var(--accent)", boxShadow: "0 0 32px rgba(255,252,0,0.4)" }}
                 >
                   {model.name[0]}
                 </div>
@@ -198,10 +198,11 @@ export default function ModelLandingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-2xl font-semibold text-white text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{
-                  background: loading ? "var(--surface)" : "linear-gradient(135deg, #7c3aed, #9333ea)",
-                  boxShadow: loading ? "none" : "0 4px 24px rgba(124,58,237,0.4)",
+                  background: loading ? "var(--surface)" : "#fffc00",
+                  color: loading ? "var(--text)" : "#0a0a0a",
+                  boxShadow: loading ? "none" : "0 4px 24px rgba(255,252,0,0.35)",
                 }}
               >
                 {loading ? (
