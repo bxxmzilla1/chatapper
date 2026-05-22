@@ -175,3 +175,31 @@ ALTER TABLE public.conversations
 -- ============================================================
 ALTER TABLE public.model_profiles
   ADD COLUMN IF NOT EXISTS redirect_url TEXT;
+
+DROP POLICY IF EXISTS "Public update model_profiles" ON public.model_profiles;
+CREATE POLICY "Public update model_profiles"
+  ON public.model_profiles FOR UPDATE TO anon, authenticated USING (true);
+
+-- ============================================================
+-- MIGRATION 5: Landing page settings (background video + overlay)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  id                    TEXT PRIMARY KEY DEFAULT 'landing',
+  background_video_url  TEXT,
+  overlay_opacity       REAL NOT NULL DEFAULT 0.55,
+  updated_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO public.app_settings (id, overlay_opacity)
+VALUES ('landing', 0.55)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read app_settings" ON public.app_settings;
+CREATE POLICY "Public read app_settings"
+  ON public.app_settings FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public update app_settings" ON public.app_settings;
+CREATE POLICY "Public update app_settings"
+  ON public.app_settings FOR UPDATE TO anon, authenticated USING (true);

@@ -76,6 +76,8 @@ import {
   Check,
   GitBranch,
   Pencil,
+  Settings,
+  Upload,
 } from "lucide-react";
 
 function VerifiedBadge({ size = 14 }: { size?: number }) {
@@ -88,13 +90,8 @@ function VerifiedBadge({ size = 14 }: { size?: number }) {
 }
 
 import { linkifyText } from "@/lib/linkify";
-
-function optimizeAvatarUrl(url: string | null, size = 160): string | null {
-  if (!url) return null;
-  return url
-    .replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")
-    .concat(`?width=${size}&height=${size}&quality=80&resize=cover`);
-}
+import { ModelAvatar } from "@/components/ModelAvatar";
+import type { AppSettings } from "@/lib/types";
 
 function getFlagEmoji(code: string) {
   return code
@@ -124,7 +121,7 @@ export default function AdminPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Models / Links tab state
-  const [sidebarTab, setSidebarTab] = useState<"chats" | "links">("chats");
+  const [sidebarTab, setSidebarTab] = useState<"chats" | "links" | "settings">("chats");
   const [models, setModels] = useState<ModelProfile[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [showNewModel, setShowNewModel] = useState(false);
@@ -155,6 +152,13 @@ export default function AdminPage() {
   const [savingEditModel, setSavingEditModel] = useState(false);
   const editAvatarRef = useRef<HTMLInputElement>(null);
   const modelAvatarRef = useRef<HTMLInputElement>(null);
+
+  // Landing settings
+  const [landingSettings, setLandingSettings] = useState<AppSettings | null>(null);
+  const [overlayOpacity, setOverlayOpacity] = useState(55);
+  const [uploadingBgVideo, setUploadingBgVideo] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const bgVideoRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -211,6 +215,76 @@ export default function AdminPage() {
   useEffect(() => {
     if (sidebarTab === "links") loadModels();
   }, [sidebarTab, loadModels]);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (res.ok && data) {
+        setLandingSettings(data);
+        setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (sidebarTab === "settings") {
+      setMobileView("chat");
+      loadSettings();
+    }
+  }, [sidebarTab, loadSettings]);
+
+  async function patchSettings(body: Record<string, unknown>) {
+    setSavingSettings(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setLandingSettings(data);
+      setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+    } catch {
+      /* ignore */
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  async function handleBgVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingBgVideo(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/settings/upload", { method: "POST", body: fd });
+      const upData = await up.json();
+      if (!up.ok) throw new Error(upData.error || "Upload failed");
+      await patchSettings({ background_video_url: upData.url });
+    } catch {
+      /* ignore */
+    } finally {
+      setUploadingBgVideo(false);
+      if (bgVideoRef.current) bgVideoRef.current.value = "";
+    }
+  }
+
+  function saveOverlayOpacity(percent: number) {
+    patchSettings({ overlay_opacity: percent / 100 });
+  }
+
+  async function removeBgVideo() {
+    await patchSettings({ background_video_url: null });
+  }
 
   // Badge is visible only when the conversation's current persona IS the original model name
   function showModelBadge(conv: Conversation) {
@@ -592,19 +666,25 @@ export default function AdminPage() {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex px-4 py-3 gap-2" style={{ borderBottom: "1px solid var(--border)" }}>
-          {(["chats", "links"] as const).map(tab => (
+        <div className="flex px-4 py-3 gap-1.5" style={{ borderBottom: "1px solid var(--border)" }}>
+          {(
+            [
+              { id: "chats" as const, label: "Chats", icon: MessageSquare },
+              { id: "links" as const, label: "Links", icon: Link2 },
+              { id: "settings" as const, label: "Settings", icon: Settings },
+            ]
+          ).map(({ id, label, icon: Icon }) => (
             <button
-              key={tab}
-              onClick={() => setSidebarTab(tab)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition"
+              key={id}
+              onClick={() => setSidebarTab(id)}
+              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-medium transition"
               style={{
-                background: sidebarTab === tab ? "var(--accent)" : "var(--surface2)",
-                color: sidebarTab === tab ? "#0a0a0a" : "var(--text-muted)",
+                background: sidebarTab === id ? "var(--accent)" : "var(--surface2)",
+                color: sidebarTab === id ? "#0a0a0a" : "var(--text-muted)",
               }}
             >
-              {tab === "chats" ? <MessageSquare className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-              {tab === "chats" ? "Chats" : "Links"}
+              <Icon className="w-3.5 h-3.5" />
+              {label}
             </button>
           ))}
         </div>
@@ -899,13 +979,12 @@ export default function AdminPage() {
                   {/* Main row */}
                   <div className="p-3 flex items-center gap-3">
                     {/* Avatar */}
-                    {m.avatar_url ? (
-                      <img src={optimizeAvatarUrl(m.avatar_url) ?? ""} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-black flex-shrink-0" style={{ background: "var(--accent)" }}>
-                        {m.name[0]}
-                      </div>
-                    )}
+                    <ModelAvatar
+                      url={m.avatar_url}
+                      name={m.name}
+                      size={160}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
@@ -1062,7 +1141,16 @@ export default function AdminPage() {
                         onClick={() => editAvatarRef.current?.click()}
                       >
                         {editModelAvatarPreview ? (
-                          <img src={editModelAvatar ? editModelAvatarPreview! : (optimizeAvatarUrl(editModelAvatarPreview) ?? editModelAvatarPreview!)} className="w-full h-full object-cover" alt="avatar" />
+                          editModelAvatar ? (
+                            <img src={editModelAvatarPreview} className="w-full h-full object-cover" alt="avatar" />
+                          ) : (
+                            <ModelAvatar
+                              url={editModelAvatarPreview}
+                              name={editModelName || m.name}
+                              size={320}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          )
                         ) : (
                           <span className="text-xs text-center px-1" style={{ color: "var(--text-muted)" }}>Photo</span>
                         )}
@@ -1145,13 +1233,108 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Chat area */}
+      {/* Chat area / Settings */}
       <div
         className={`flex-1 flex flex-col min-w-0 ${
-          mobileView === "list" ? "hidden md:flex" : "flex"
+          mobileView === "list" && sidebarTab !== "settings" ? "hidden md:flex" : "flex"
         }`}
       >
-        {!selected ? (
+        {sidebarTab === "settings" ? (
+          <div className="flex-1 overflow-y-auto px-6 py-6 max-w-lg mx-auto w-full">
+            <h2 className="text-xl font-bold text-white mb-1">Landing Page</h2>
+            <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+              Background video and overlay for the main and custom model landing pages.
+            </p>
+
+            <div
+              className="rounded-2xl p-4 mb-6 flex flex-col gap-4"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <p className="text-sm font-semibold text-white">Background video</p>
+
+              {landingSettings?.background_video_url ? (
+                <div className="relative rounded-xl overflow-hidden aspect-video bg-black">
+                  <video
+                    src={landingSettings.background_video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    loop
+                    playsInline
+                    autoPlay
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: `rgba(0,0,0,${overlayOpacity / 100})` }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="rounded-xl aspect-video flex items-center justify-center text-sm"
+                  style={{ background: "var(--surface2)", color: "var(--text-muted)" }}
+                >
+                  No background video set
+                </div>
+              )}
+
+              <input
+                ref={bgVideoRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={handleBgVideoUpload}
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => bgVideoRef.current?.click()}
+                  disabled={uploadingBgVideo}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                  style={{ background: "var(--accent)", color: "#0a0a0a" }}
+                >
+                  <Upload className="w-4 h-4" />
+                  {uploadingBgVideo ? "Uploading…" : landingSettings?.background_video_url ? "Replace video" : "Upload video"}
+                </button>
+                {landingSettings?.background_video_url && (
+                  <button
+                    type="button"
+                    onClick={removeBgVideo}
+                    disabled={savingSettings}
+                    className="px-4 py-3 rounded-xl text-sm font-medium text-red-400 disabled:opacity-50"
+                    style={{ background: "var(--surface2)" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl p-4 flex flex-col gap-3"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">Black overlay opacity</p>
+                <span className="text-sm font-medium" style={{ color: "var(--accent-light)" }}>
+                  {overlayOpacity}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={overlayOpacity}
+                onChange={(e) => setOverlayOpacity(Number(e.target.value))}
+                onMouseUp={(e) => saveOverlayOpacity(Number(e.currentTarget.value))}
+                onTouchEnd={(e) => saveOverlayOpacity(Number(e.currentTarget.value))}
+                className="w-full accent-yellow-400"
+              />
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Darkens the video so text stays readable. {savingSettings ? "Saving…" : "Changes save automatically."}
+              </p>
+            </div>
+          </div>
+        ) : !selected ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <MessageSquare
               className="w-16 h-16"

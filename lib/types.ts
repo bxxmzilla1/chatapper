@@ -43,6 +43,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      app_settings: {
+        Row: {
+          id: string;
+          background_video_url: string | null;
+          overlay_opacity: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          background_video_url?: string | null;
+          overlay_opacity?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          background_video_url?: string | null;
+          overlay_opacity?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       model_profiles: {
         Row: {
           id: string;
@@ -114,3 +135,4 @@ export type Database = {
 export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type ModelProfile = Database["public"]["Tables"]["model_profiles"]["Row"];
+export type AppSettings = Database["public"]["Tables"]["app_settings"]["Row"];

@@ -7,13 +7,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
 import { linkifyText } from "@/lib/linkify";
-
-function optimizeAvatarUrl(url: string | null, size = 160): string | null {
-  if (!url) return null;
-  return url
-    .replace("/storage/v1/object/public/", "/storage/v1/render/image/public/")
-    .concat(`?width=${size}&height=${size}&quality=80&resize=cover`);
-}
+import { ModelAvatar } from "@/components/ModelAvatar";
 import {
   Send,
   Paperclip,
@@ -392,16 +386,12 @@ export default function ChatPage() {
       >
         {/* Avatar */}
         <div className="relative flex-shrink-0">
-          {modelAvatarUrl ? (
-            <img src={optimizeAvatarUrl(modelAvatarUrl) ?? ""} alt={currentPersona} className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold text-sm"
-              style={{ background: "var(--accent)" }}
-            >
-              {currentPersona[0]}
-            </div>
-          )}
+          <ModelAvatar
+            url={modelAvatarUrl}
+            name={currentPersona}
+            size={160}
+            className="w-10 h-10 rounded-full object-cover"
+          />
           <span
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
             style={{ background: "#22c55e", borderColor: "var(--surface)" }}
@@ -443,16 +433,13 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
-            {modelAvatarUrl ? (
-              <img src={optimizeAvatarUrl(modelAvatarUrl) ?? ""} alt={currentPersona} className="w-16 h-16 rounded-full object-cover" />
-            ) : (
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
-                style={{ background: "var(--surface2)" }}
-              >
-                {currentPersona[0]}
-              </div>
-            )}
+            <ModelAvatar
+              url={modelAvatarUrl}
+              name={currentPersona}
+              size={320}
+              fallback="muted"
+              className="w-16 h-16 rounded-full object-cover text-2xl"
+            />
             <div className="flex items-center gap-1.5">
               <p className="font-semibold text-white">{currentPersona}</p>
               {isModelPersona && <VerifiedBadge size={16} />}
