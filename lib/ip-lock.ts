@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
 
+export type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
+
 export async function isIpLocked(
   supabase: SupabaseClient<Database>,
   ip: string | null | undefined
@@ -12,6 +14,24 @@ export async function isIpLocked(
     .eq("ip_address", ip)
     .maybeSingle();
   return Boolean(data);
+}
+
+/** Most recent chat for this IP (the one they should return to). */
+export async function findLatestConversationForIp(
+  supabase: SupabaseClient<Database>,
+  ip: string | null | undefined
+): Promise<ConversationRow | null> {
+  if (!ip) return null;
+
+  const { data } = await supabase
+    .from("conversations")
+    .select("*")
+    .eq("user_ip", ip)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data;
 }
 
 export async function setConversationLock(

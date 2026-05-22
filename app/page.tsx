@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { LandingBackground } from "@/components/LandingBackground";
 import { getRandomMaleUsername } from "@/lib/male-names";
+import { goToChat } from "@/lib/chat-navigation";
 
 type Location = {
   city: string | null;
@@ -20,6 +21,7 @@ type LandingSettings = {
 
 export default function LandingPage() {
   const [loading, setLoading] = useState(false);
+  const [resuming, setResuming] = useState(true);
   const [error, setError] = useState("");
   const [location, setLocation] = useState<Location | null>(null);
   const [settings, setSettings] = useState<LandingSettings>({
@@ -44,7 +46,18 @@ export default function LandingPage() {
         }
       })
       .catch(() => {});
-  }, []);
+
+    fetch("/api/conversations/resume")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.conversation?.id) {
+          goToChat(router, data.conversation, true);
+          return;
+        }
+        setResuming(false);
+      })
+      .catch(() => setResuming(false));
+  }, [router]);
 
   async function handleStart() {
     const username = getRandomMaleUsername();
@@ -65,7 +78,10 @@ export default function LandingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start");
       if (!data.id) throw new Error("Invalid response");
-      router.push(`/chat/${data.id}?user=${encodeURIComponent(username)}`);
+      goToChat(router, {
+        id: data.id,
+        user_username: data.user_username ?? username,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
@@ -127,7 +143,7 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={handleStart}
-              disabled={loading}
+              disabled={loading || resuming}
               className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
               style={{
                 background: loading ? "var(--surface)" : "#fffc00",
@@ -135,13 +151,13 @@ export default function LandingPage() {
                 boxShadow: loading ? "none" : "0 4px 24px rgba(255,252,0,0.35)",
               }}
             >
-              {loading ? (
+              {loading || resuming ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                     <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                   </svg>
-                  Matching you…
+                  {resuming ? "Opening your chat…" : "Matching you…"}
                 </>
               ) : (
                 <>

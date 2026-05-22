@@ -7,6 +7,7 @@ import type { ModelProfile } from "@/lib/types";
 import { LandingBackground } from "@/components/LandingBackground";
 import { ModelAvatar } from "@/components/ModelAvatar";
 import { getRandomMaleUsername } from "@/lib/male-names";
+import { goToChat } from "@/lib/chat-navigation";
 
 type Location = { city: string | null; country: string | null; country_code: string | null; region: string | null };
 
@@ -39,6 +40,7 @@ export default function ModelLandingPage() {
   const [notFound, setNotFound] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resuming, setResuming] = useState(true);
   const [error, setError] = useState("");
   const [settings, setSettings] = useState<LandingSettings>({
     background_video_url: null,
@@ -76,7 +78,18 @@ export default function ModelLandingPage() {
         }
       })
       .catch(() => {});
-  }, []);
+
+    fetch("/api/conversations/resume")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.conversation?.id) {
+          goToChat(router, data.conversation, true);
+          return;
+        }
+        setResuming(false);
+      })
+      .catch(() => setResuming(false));
+  }, [router]);
 
   async function handleStart() {
     if (!model) return;
@@ -99,7 +112,10 @@ export default function ModelLandingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start");
-      router.push(`/chat/${data.id}?user=${encodeURIComponent(username)}`);
+      goToChat(router, {
+        id: data.id,
+        user_username: data.user_username ?? username,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
@@ -166,21 +182,21 @@ export default function ModelLandingPage() {
             <button
               type="button"
               onClick={handleStart}
-              disabled={loading}
+              disabled={loading || resuming}
               className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
               style={{
-                background: loading ? "var(--surface)" : "#fffc00",
-                color: loading ? "var(--text)" : "#0a0a0a",
-                boxShadow: loading ? "none" : "0 4px 24px rgba(255,252,0,0.35)",
+                background: loading || resuming ? "var(--surface)" : "#fffc00",
+                color: loading || resuming ? "var(--text)" : "#0a0a0a",
+                boxShadow: loading || resuming ? "none" : "0 4px 24px rgba(255,252,0,0.35)",
               }}
             >
-              {loading ? (
+              {loading || resuming ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                     <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                   </svg>
-                  Connecting…
+                  {resuming ? "Opening your chat…" : "Connecting…"}
                 </>
               ) : (
                 <>

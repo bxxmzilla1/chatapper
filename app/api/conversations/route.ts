@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { resolveNewConversationContext } from "@/lib/persona";
-import { isIpLocked } from "@/lib/ip-lock";
+import { findLatestConversationForIp, isIpLocked } from "@/lib/ip-lock";
 import { resolveUserIp } from "@/lib/resolve-user-ip";
 
 export async function POST(req: NextRequest) {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       model_slug: model_slug ?? null,
       model_avatar_url: modelAvatarUrl,
       user_ip: userIp,
-      chat_locked: ipLocked,
+      chat_locked: false,
     })
     .select()
     .single();
