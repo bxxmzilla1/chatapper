@@ -155,7 +155,7 @@ export default function ModelLandingPage() {
 
             {/* Name + verified badge */}
             <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text)" }}>{model.name}</h1>
+              <h1 className="text-3xl font-bold text-white tracking-tight">{model.name}</h1>
               <VerifiedBadge size={26} />
             </div>
 
@@ -176,7 +176,7 @@ export default function ModelLandingPage() {
                   placeholder="Your nickname"
                   maxLength={20}
                   autoComplete="off"
-                  className="w-full px-4 py-4 rounded-2xl text-base outline-none transition-all placeholder-gray-400"
+                  className="w-full px-4 py-4 rounded-2xl text-white text-base outline-none transition-all placeholder-gray-600"
                   style={{
                     background: "var(--surface)",
                     border: `1px solid ${error ? "rgba(248,113,113,0.6)" : "var(--border)"}`,

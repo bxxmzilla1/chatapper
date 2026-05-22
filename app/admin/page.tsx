@@ -580,7 +580,7 @@ export default function AdminPage() {
           className="px-4 py-4 flex items-center justify-between"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          <h1 className="font-bold text-lg" style={{ color: "var(--text)" }}>Admin Panel</h1>
+          <h1 className="font-bold text-lg text-white">Admin Panel</h1>
           <button
             onClick={handleLogout}
             className="p-2 rounded-xl transition hover:opacity-70"
@@ -716,8 +716,8 @@ export default function AdminPage() {
                     {/* Row 1: name + time */}
                     <div className="flex items-center justify-between gap-2">
                       <p
-                        className="font-semibold text-sm truncate"
-                        style={{ color: "var(--text)", fontWeight: conv.unread_count > 0 ? 700 : 500 }}
+                        className="font-semibold text-sm truncate text-white"
+                        style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
                       >
                         {conv.user_username}
                       </p>
@@ -909,7 +909,7 @@ export default function AdminPage() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <p className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{m.name}</p>
+                        <p className="font-semibold text-white text-sm truncate">{m.name}</p>
                         <VerifiedBadge size={14} />
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
@@ -977,7 +977,7 @@ export default function AdminPage() {
                       {/* Toggle row */}
                       <div className="flex items-center justify-between pt-3">
                         <div className="flex flex-col gap-0.5">
-                          <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                          <p className="text-xs font-semibold text-white">
                             {redirectToggleOn ? "Redirect URL" : "Landing Page"}
                           </p>
                           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -1053,7 +1053,7 @@ export default function AdminPage() {
                   {/* ── Edit profile panel ── */}
                   {editingModelSlug === m.slug && (
                     <div className="px-3 pb-3 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
-                      <p className="text-xs pt-3 font-semibold" style={{ color: "var(--text)" }}>Edit Profile</p>
+                      <p className="text-xs pt-3 font-semibold text-white">Edit Profile</p>
 
                       {/* Avatar */}
                       <div
@@ -1157,7 +1157,7 @@ export default function AdminPage() {
               className="w-16 h-16"
               style={{ color: "var(--border)" }}
             />
-            <p className="text-lg font-medium" style={{ color: "var(--text)" }}>
+            <p className="text-lg font-medium text-white">
               Select a conversation
             </p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -1189,7 +1189,7 @@ export default function AdminPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold truncate" style={{ color: "var(--text)" }}>
+                  <p className="font-semibold text-white truncate">
                     {selected.user_username}
                   </p>
                   {selected.user_country_code && (
@@ -1258,7 +1258,7 @@ export default function AdminPage() {
                             />
                           </svg>
                           User switched persona → now{" "}
-                          <span className="font-bold" style={{ color: "var(--text)" }}>{newName}</span>
+                          <span className="font-bold text-white">{newName}</span>
                         </div>
                         <div
                           className="flex-1 h-px"
@@ -1347,7 +1347,7 @@ export default function AdminPage() {
                         <VideoMessage src={msg.file_url} />
                       )}
                       {msg.content && (
-                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isAdmin ? "text-black" : "text-gray-900"}`}>
+                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isAdmin ? "text-black" : "text-white"}`}>
                           {linkifyText(msg.content, isAdmin)}
                         </p>
                       )}
@@ -1355,7 +1355,7 @@ export default function AdminPage() {
                         className={`text-xs mt-1 ${
                           isAdmin ? "text-right" : "text-left"
                         }`}
-                        style={{ color: "rgba(0,0,0,0.45)" }}
+                        style={{ color: isAdmin ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.45)" }}
                       >
                         {new Date(msg.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -1401,7 +1401,7 @@ export default function AdminPage() {
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
                     style={{ background: "var(--border)" }}
                   >
-                    <X className="w-3 h-3 text-gray-600" />
+                    <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -1455,8 +1455,7 @@ export default function AdminPage() {
                   }}
                   placeholder={`Reply as ${selected.admin_username}…`}
                   rows={1}
-                  className="flex-1 resize-none bg-transparent outline-none text-sm placeholder-gray-400 leading-relaxed max-h-32 overflow-y-auto"
-                  style={{ color: "var(--text)" }}
+                  className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed max-h-32 overflow-y-auto"
                 />
               </div>
               <button

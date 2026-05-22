@@ -104,14 +104,14 @@ export default function LandingPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
+            <h1 className="text-3xl font-bold text-white tracking-tight">
               Flinky
             </h1>
-          <p className="mt-2 text-xl font-semibold text-center" style={{ color: "var(--text-muted)" }}>
+          <p className="mt-2 text-xl font-semibold text-center text-white">
             {cityName ? (
               <>
                 Meet people in{" "}
-                <span style={{ color: "var(--text)", fontWeight: 700 }}>{cityName}</span>
+                <span style={{ color: "var(--accent-light)" }}>{cityName}</span>
               </>
             ) : (
               "Meet people near you"
@@ -131,7 +131,7 @@ export default function LandingPage() {
                   maxLength={20}
                   autoComplete="off"
                   autoFocus
-                  className="w-full px-4 py-4 rounded-2xl text-base outline-none transition-all placeholder-gray-400"
+                  className="w-full px-4 py-4 rounded-2xl text-white text-base outline-none transition-all placeholder-gray-600"
                   style={{
                     background: "var(--surface)",
                     border: `1px solid ${error ? "rgba(248,113,113,0.6)" : "var(--border)"}`,
