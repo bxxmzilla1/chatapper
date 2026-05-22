@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
+import { setConversationLock } from "@/lib/ip-lock";
+import type { Database } from "@/lib/types";
+
+type ConversationUpdate =
+  Database["public"]["Tables"]["conversations"]["Update"];
 
 export async function GET(
   _req: NextRequest,
@@ -49,9 +54,26 @@ export async function PATCH(
   const body = await req.json();
   const supabase = createServerClient();
 
+  if ("chat_locked" in body && typeof body.chat_locked === "boolean") {
+    await setConversationLock(supabase, id, body.chat_locked);
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(data);
+  }
+
+  const { chat_locked: _locked, ...rest } = body as ConversationUpdate & {
+    chat_locked?: boolean;
+  };
   const { data, error } = await supabase
     .from("conversations")
-    .update(body)
+    .update(rest as ConversationUpdate)
     .eq("id", id)
     .select()
     .single();

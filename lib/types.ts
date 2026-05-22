@@ -16,6 +16,7 @@ export type Database = {
           model_slug: string | null;
           model_avatar_url: string | null;
           chat_locked: boolean;
+          user_ip: string | null;
         };
         Insert: {
           id?: string;
@@ -31,6 +32,7 @@ export type Database = {
           model_slug?: string | null;
           model_avatar_url?: string | null;
           chat_locked?: boolean;
+          user_ip?: string | null;
         };
         Update: {
           id?: string;
@@ -46,6 +48,25 @@ export type Database = {
           model_slug?: string | null;
           model_avatar_url?: string | null;
           chat_locked?: boolean;
+          user_ip?: string | null;
+        };
+        Relationships: [];
+      };
+      locked_ips: {
+        Row: {
+          ip_address: string;
+          locked_at: string;
+          source_conversation_id: string | null;
+        };
+        Insert: {
+          ip_address: string;
+          locked_at?: string;
+          source_conversation_id?: string | null;
+        };
+        Update: {
+          ip_address?: string;
+          locked_at?: string;
+          source_conversation_id?: string | null;
         };
         Relationships: [];
       };

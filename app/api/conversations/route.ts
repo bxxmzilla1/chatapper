@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { resolveNewConversationContext } from "@/lib/persona";
+import { isIpLocked } from "@/lib/ip-lock";
+import { resolveUserIp } from "@/lib/resolve-user-ip";
 
 export async function POST(req: NextRequest) {
   const { username, city, country, country_code, model_slug, admin_username } = await req.json();
@@ -18,6 +20,9 @@ export async function POST(req: NextRequest) {
     }
   );
 
+  const userIp = await resolveUserIp(req);
+  const ipLocked = await isIpLocked(supabase, userIp);
+
   const { data, error } = await supabase
     .from("conversations")
     .insert({
@@ -28,6 +33,8 @@ export async function POST(req: NextRequest) {
       user_country_code: country_code ?? null,
       model_slug: model_slug ?? null,
       model_avatar_url: modelAvatarUrl,
+      user_ip: userIp,
+      chat_locked: ipLocked,
     })
     .select()
     .single();

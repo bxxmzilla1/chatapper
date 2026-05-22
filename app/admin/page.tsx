@@ -164,6 +164,7 @@ export default function AdminPage() {
   const [overlayOpacity, setOverlayOpacity] = useState(55);
   const [uploadingBgVideo, setUploadingBgVideo] = useState(false);
   const [bgVideoStatus, setBgVideoStatus] = useState<string | null>(null);
+  const [lockedIpSet, setLockedIpSet] = useState<Set<string>>(new Set());
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
@@ -214,6 +215,29 @@ export default function AdminPage() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  const loadLockedIps = useCallback(async () => {
+    try {
+      const res = await fetch("/api/lock/ips");
+      const data = await res.json();
+      setLockedIpSet(
+        new Set(Array.isArray(data.ips) ? (data.ips as string[]) : [])
+      );
+    } catch {
+      setLockedIpSet(new Set());
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLockedIps();
+  }, [loadLockedIps]);
+
+  function isConversationLocked(conv: Conversation) {
+    return (
+      conv.chat_locked ||
+      Boolean(conv.user_ip && lockedIpSet.has(conv.user_ip))
+    );
+  }
 
   const loadModels = useCallback(async () => {
     setModelsLoading(true);
@@ -434,7 +458,7 @@ export default function AdminPage() {
 
   async function toggleChatLock() {
     if (!selected) return;
-    const next = !selected.chat_locked;
+    const next = !isConversationLocked(selected);
     try {
       const res = await fetch(`/api/conversations/${selected.id}`, {
         method: "PATCH",
@@ -448,8 +472,16 @@ export default function AdminPage() {
       const updated: Conversation = await res.json();
       setSelected(updated);
       setConversations((prev) =>
-        prev.map((c) => (c.id === updated.id ? updated : c))
+        prev.map((c) =>
+          c.id === updated.id
+            ? updated
+            : updated.user_ip && c.user_ip === updated.user_ip
+              ? { ...c, chat_locked: updated.chat_locked }
+              : c
+        )
       );
+      await loadLockedIps();
+      loadConversations();
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "Could not update lock");
     }
@@ -635,10 +667,23 @@ export default function AdminPage() {
       )
       .subscribe();
 
+    const lockChannel = supabase
+      .channel("admin-locked-ips")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "locked_ips" },
+        () => {
+          loadLockedIps();
+          loadConversations();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(lockChannel);
     };
-  }, [loadConversations]);
+  }, [loadConversations, loadLockedIps]);
 
   // Load messages for selected conversation
   useEffect(() => {
@@ -981,12 +1026,21 @@ export default function AdminPage() {
                         >
                           {conv.user_username}
                         </p>
-                        {conv.chat_locked && (
-                          <Lock
-                            className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: "#f87171" }}
-                            aria-label="Chat locked"
-                          />
+                        {isConversationLocked(conv) && (
+                          <span
+                            className="flex-shrink-0"
+                            title={
+                              conv.user_ip
+                                ? `Locked (IP: ${conv.user_ip})`
+                                : "Locked"
+                            }
+                          >
+                            <Lock
+                              className="w-3.5 h-3.5"
+                              style={{ color: "#f87171" }}
+                              aria-label="Chat locked"
+                            />
+                          </span>
                         )}
                       </div>
                       <span
@@ -1652,7 +1706,7 @@ export default function AdminPage() {
             >
               <p className="text-sm font-semibold text-white">User lock popup</p>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Default popup for main landing and non-custom chats. Custom landing pages use their own lock settings under Links → Edit profile. Lock a chat from its header — only that user is affected.
+                Default popup for main landing and non-custom chats. Custom landing pages use their own lock settings under Links → Edit profile. Lock blocks the user&apos;s IP (via IPinfo) so new usernames from the same device stay locked.
               </p>
               <div>
                 <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Custom name in message</label>
@@ -1862,20 +1916,28 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={toggleChatLock}
-                title={selected.chat_locked ? "Unlock this chat" : "Lock this chat"}
+                title={
+                  isConversationLocked(selected)
+                    ? "Unlock this user (and their IP)"
+                    : "Lock this user (tracks their IP)"
+                }
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95 flex-shrink-0"
                 style={{
-                  background: selected.chat_locked ? "#dc2626" : "var(--surface2)",
-                  color: selected.chat_locked ? "#fff" : "var(--accent-light)",
-                  border: `1px solid ${selected.chat_locked ? "#dc2626" : "var(--border)"}`,
+                  background: isConversationLocked(selected)
+                    ? "#dc2626"
+                    : "var(--surface2)",
+                  color: isConversationLocked(selected)
+                    ? "#fff"
+                    : "var(--accent-light)",
+                  border: `1px solid ${isConversationLocked(selected) ? "#dc2626" : "var(--border)"}`,
                 }}
               >
-                {selected.chat_locked ? (
+                {isConversationLocked(selected) ? (
                   <LockOpen className="w-4 h-4" />
                 ) : (
                   <Lock className="w-4 h-4" />
                 )}
-                {selected.chat_locked ? "Unlock" : "Lock"}
+                {isConversationLocked(selected) ? "Unlock" : "Lock"}
               </button>
             </div>
 

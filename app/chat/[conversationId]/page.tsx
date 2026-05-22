@@ -67,6 +67,16 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const syncChatLockState = useCallback(async (convLocked?: boolean) => {
+    try {
+      const statusRes = await fetch("/api/lock/status");
+      const status = statusRes.ok ? await statusRes.json() : { locked: false };
+      setChatLocked(Boolean(convLocked) || Boolean(status.locked));
+    } catch {
+      setChatLocked(Boolean(convLocked));
+    }
+  }, []);
+
   // Load conversation
   useEffect(() => {
     async function load() {
@@ -77,8 +87,13 @@ export default function ChatPage() {
       }
       const data = await res.json();
       setConversation(data);
-      setChatLocked(Boolean(data.chat_locked));
       setMatchHistory([data.admin_username]);
+
+      await fetch(`/api/conversations/${conversationId}/ip`, {
+        method: "POST",
+      }).catch(() => {});
+
+      await syncChatLockState(Boolean(data.chat_locked));
       if (data.model_avatar_url) {
         setModelAvatarUrl(data.model_avatar_url);
       }
@@ -129,7 +144,7 @@ export default function ChatPage() {
       await applyLockPopupForConversation(data);
     }
     load();
-  }, [conversationId, router]);
+  }, [conversationId, router, syncChatLockState]);
 
   useEffect(() => {
     const settingsChannel = supabase
@@ -214,7 +229,18 @@ export default function ChatPage() {
         (payload) => {
           const updated = payload.new as Conversation;
           setConversation(updated);
-          setChatLocked(Boolean(updated.chat_locked));
+          syncChatLockState(Boolean(updated.chat_locked));
+        }
+      )
+      .subscribe();
+
+    const lockIpChannel = supabase
+      .channel("locked-ips-user")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "locked_ips" },
+        () => {
+          syncChatLockState();
         }
       )
       .subscribe();
@@ -222,8 +248,9 @@ export default function ChatPage() {
     return () => {
       supabase.removeChannel(msgChannel);
       supabase.removeChannel(convChannel);
+      supabase.removeChannel(lockIpChannel);
     };
-  }, [conversationId, scrollToBottom]);
+  }, [conversationId, scrollToBottom, syncChatLockState]);
 
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault();

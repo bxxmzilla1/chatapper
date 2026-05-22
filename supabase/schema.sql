@@ -271,3 +271,45 @@ ALTER TABLE public.model_profiles
 
 ALTER TABLE public.model_profiles
   ADD COLUMN IF NOT EXISTS lock_button_label TEXT DEFAULT 'Message on OnlyFans';
+
+-- ============================================================
+-- MIGRATION 11: User IP tracking + IP-based chat lock
+-- ============================================================
+ALTER TABLE public.conversations
+  ADD COLUMN IF NOT EXISTS user_ip TEXT;
+
+CREATE TABLE IF NOT EXISTS public.locked_ips (
+  ip_address TEXT PRIMARY KEY,
+  locked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  source_conversation_id UUID REFERENCES public.conversations(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_user_ip ON public.conversations(user_ip);
+
+ALTER TABLE public.locked_ips ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read locked_ips" ON public.locked_ips;
+CREATE POLICY "Public read locked_ips"
+  ON public.locked_ips FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public insert locked_ips" ON public.locked_ips;
+CREATE POLICY "Public insert locked_ips"
+  ON public.locked_ips FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public update locked_ips" ON public.locked_ips;
+CREATE POLICY "Public update locked_ips"
+  ON public.locked_ips FOR UPDATE TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public delete locked_ips" ON public.locked_ips;
+CREATE POLICY "Public delete locked_ips"
+  ON public.locked_ips FOR DELETE TO anon, authenticated USING (true);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'locked_ips'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.locked_ips;
+  END IF;
+END $$;
