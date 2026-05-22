@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
-import { resolveAdminPersona } from "@/lib/persona";
+import { resolveNewConversationContext } from "@/lib/persona";
 
 export async function POST(req: NextRequest) {
   const { username, city, country, country_code, model_slug, admin_username } = await req.json();
@@ -10,7 +10,13 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServerClient();
-  const adminUsername = await resolveAdminPersona(supabase, admin_username);
+  const { adminUsername, modelAvatarUrl } = await resolveNewConversationContext(
+    supabase,
+    {
+      modelProvidedName: admin_username,
+      modelSlug: model_slug ?? null,
+    }
+  );
 
   const { data, error } = await supabase
     .from("conversations")
@@ -21,6 +27,7 @@ export async function POST(req: NextRequest) {
       user_country: country ?? null,
       user_country_code: country_code ?? null,
       model_slug: model_slug ?? null,
+      model_avatar_url: modelAvatarUrl,
     })
     .select()
     .single();

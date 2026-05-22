@@ -76,11 +76,16 @@ export default function ChatPage() {
       const data = await res.json();
       setConversation(data);
       setMatchHistory([data.admin_username]);
+      if (data.model_avatar_url) {
+        setModelAvatarUrl(data.model_avatar_url);
+      }
       if (data.model_slug) {
         setIsModelPersona(true);
         fetch(`/api/models/${data.model_slug}`)
           .then(r => r.ok ? r.json() : null)
-          .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
+          .then(m => {
+            if (m?.avatar_url) setModelAvatarUrl(m.avatar_url);
+          })
           .catch(() => {});
       }
     }

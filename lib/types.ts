@@ -53,6 +53,7 @@ export type Database = {
           overlay_opacity: number;
           persona_mode: "random" | "fixed";
           fixed_persona_name: string | null;
+          fixed_persona_avatar_url: string | null;
           chat_locked: boolean;
           lock_contact_name: string | null;
           lock_button_url: string | null;
@@ -65,6 +66,7 @@ export type Database = {
           overlay_opacity?: number;
           persona_mode?: "random" | "fixed";
           fixed_persona_name?: string | null;
+          fixed_persona_avatar_url?: string | null;
           chat_locked?: boolean;
           lock_contact_name?: string | null;
           lock_button_url?: string | null;
@@ -77,6 +79,7 @@ export type Database = {
           overlay_opacity?: number;
           persona_mode?: "random" | "fixed";
           fixed_persona_name?: string | null;
+          fixed_persona_avatar_url?: string | null;
           chat_locked?: boolean;
           lock_contact_name?: string | null;
           lock_button_url?: string | null;

@@ -244,3 +244,9 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.app_settings;
   END IF;
 END $$;
+
+-- ============================================================
+-- MIGRATION 8: Custom avatar for fixed persona (one name mode)
+-- ============================================================
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS fixed_persona_avatar_url TEXT;

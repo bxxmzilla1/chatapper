@@ -165,6 +165,10 @@ export default function AdminPage() {
   const bgVideoRef = useRef<HTMLInputElement>(null);
   const [personaMode, setPersonaMode] = useState<"random" | "fixed">("random");
   const [fixedPersonaName, setFixedPersonaName] = useState("");
+  const [fixedPersonaAvatarPreview, setFixedPersonaAvatarPreview] = useState<string | null>(null);
+  const [fixedPersonaAvatarFile, setFixedPersonaAvatarFile] = useState<File | null>(null);
+  const [removeFixedPersonaAvatar, setRemoveFixedPersonaAvatar] = useState(false);
+  const fixedPersonaAvatarRef = useRef<HTMLInputElement>(null);
   const [lockContactName, setLockContactName] = useState("her");
   const [lockButtonUrl, setLockButtonUrl] = useState("");
   const [lockButtonLabel, setLockButtonLabel] = useState("Message on OnlyFans");
@@ -230,6 +234,9 @@ export default function AdminPage() {
     setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
     setPersonaMode(data.persona_mode === "fixed" ? "fixed" : "random");
     setFixedPersonaName(data.fixed_persona_name ?? "");
+    setFixedPersonaAvatarPreview(data.fixed_persona_avatar_url ?? null);
+    setFixedPersonaAvatarFile(null);
+    setRemoveFixedPersonaAvatar(false);
     setLockContactName(data.lock_contact_name ?? "her");
     setLockButtonUrl(data.lock_button_url ?? "");
     setLockButtonLabel(data.lock_button_label ?? "Message on OnlyFans");
@@ -375,10 +382,35 @@ export default function AdminPage() {
     localVideoPreview ?? landingSettings?.background_video_url ?? null;
 
   async function savePersonaSettings() {
+    let fixed_persona_avatar_url: string | null = null;
+
+    if (personaMode === "fixed") {
+      if (fixedPersonaAvatarFile) {
+        const ext = fixedPersonaAvatarFile.name.split(".").pop() ?? "jpg";
+        const path = `persona/fixed-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("chat-media")
+          .upload(path, fixedPersonaAvatarFile, { upsert: true });
+        if (upErr) {
+          setSettingsError(upErr.message);
+          return;
+        }
+        const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+        fixed_persona_avatar_url = urlData.publicUrl;
+      } else if (removeFixedPersonaAvatar) {
+        fixed_persona_avatar_url = null;
+      } else {
+        fixed_persona_avatar_url = landingSettings?.fixed_persona_avatar_url ?? null;
+      }
+    }
+
     await patchSettings({
       persona_mode: personaMode,
       fixed_persona_name: personaMode === "fixed" ? fixedPersonaName : null,
+      fixed_persona_avatar_url: personaMode === "fixed" ? fixed_persona_avatar_url : null,
     });
+    setFixedPersonaAvatarFile(null);
+    setRemoveFixedPersonaAvatar(false);
   }
 
   async function saveLockConfig() {
@@ -1386,15 +1418,90 @@ export default function AdminPage() {
                 ))}
               </div>
               {personaMode === "fixed" && (
-                <input
-                  type="text"
-                  value={fixedPersonaName}
-                  onChange={(e) => setFixedPersonaName(e.target.value)}
-                  placeholder="e.g. Violet"
-                  maxLength={30}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
-                />
+                <>
+                  <input
+                    type="text"
+                    value={fixedPersonaName}
+                    onChange={(e) => setFixedPersonaName(e.target.value)}
+                    placeholder="e.g. Violet"
+                    maxLength={30}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                  />
+                  <div>
+                    <label className="text-xs mb-2 block" style={{ color: "var(--text-muted)" }}>
+                      Profile photo (all new chats)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fixedPersonaAvatarRef.current?.click()}
+                        className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                      >
+                        {fixedPersonaAvatarPreview ? (
+                          <img
+                            src={fixedPersonaAvatarPreview}
+                            className="w-full h-full object-cover"
+                            alt="Persona avatar"
+                          />
+                        ) : (
+                          <div
+                            className="w-full h-full flex items-center justify-center text-xs"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            Add
+                          </div>
+                        )}
+                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fixedPersonaAvatarRef.current?.click()}
+                          className="text-xs font-medium px-3 py-2 rounded-lg"
+                          style={{ background: "var(--surface2)", color: "var(--accent-light)" }}
+                        >
+                          Upload image
+                        </button>
+                        {fixedPersonaAvatarPreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFixedPersonaAvatarPreview(null);
+                              setFixedPersonaAvatarFile(null);
+                              setRemoveFixedPersonaAvatar(true);
+                              if (fixedPersonaAvatarRef.current) {
+                                fixedPersonaAvatarRef.current.value = "";
+                              }
+                            }}
+                            className="text-xs text-left"
+                            style={{ color: "#f87171" }}
+                          >
+                            Remove photo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      ref={fixedPersonaAvatarRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (!f.type.startsWith("image/")) {
+                          setSettingsError("Please choose an image file.");
+                          return;
+                        }
+                        setSettingsError("");
+                        setFixedPersonaAvatarFile(f);
+                        setFixedPersonaAvatarPreview(URL.createObjectURL(f));
+                        setRemoveFixedPersonaAvatar(false);
+                      }}
+                    />
+                  </div>
+                </>
               )}
               <button
                 type="button"

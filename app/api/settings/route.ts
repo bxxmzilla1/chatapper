@@ -65,6 +65,14 @@ export async function PATCH(req: NextRequest) {
         : null;
   }
 
+  if ("fixed_persona_avatar_url" in body) {
+    updates.fixed_persona_avatar_url =
+      typeof body.fixed_persona_avatar_url === "string" &&
+      body.fixed_persona_avatar_url.trim()
+        ? body.fixed_persona_avatar_url.trim()
+        : null;
+  }
+
   if ("chat_locked" in body) {
     updates.chat_locked = Boolean(body.chat_locked);
   }
