@@ -162,6 +162,7 @@ export type Database = {
           sender_type: "user" | "admin" | "system";
           file_url: string | null;
           file_type: "image" | "video" | null;
+          moderation_hidden: boolean;
           created_at: string;
         };
         Insert: {
@@ -171,6 +172,7 @@ export type Database = {
           sender_type: "user" | "admin" | "system";
           file_url?: string | null;
           file_type?: "image" | "video" | null;
+          moderation_hidden?: boolean;
           created_at?: string;
         };
         Update: {
@@ -180,6 +182,7 @@ export type Database = {
           sender_type?: "user" | "admin" | "system";
           file_url?: string | null;
           file_type?: "image" | "video" | null;
+          moderation_hidden?: boolean;
           created_at?: string;
         };
         Relationships: [];

@@ -80,6 +80,7 @@ import {
   Upload,
   Lock,
   LockOpen,
+  ShieldAlert,
 } from "lucide-react";
 
 function VerifiedBadge({ size = 14 }: { size?: number }) {
@@ -94,6 +95,11 @@ function VerifiedBadge({ size = 14 }: { size?: number }) {
 import { linkifyText } from "@/lib/linkify";
 import { ModelAvatar } from "@/components/ModelAvatar";
 import type { AppSettings } from "@/lib/types";
+import {
+  MODERATION_NOTICE,
+  moderationBubbleStyle,
+  moderationTextClass,
+} from "@/lib/message-moderation";
 
 function getFlagEmoji(code: string) {
   return code
@@ -108,6 +114,8 @@ export default function AdminPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [moderatingMessage, setModeratingMessage] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -685,9 +693,34 @@ export default function AdminPage() {
     };
   }, [loadConversations, loadLockedIps]);
 
+  async function toggleMessageModeration(msg: Message) {
+    setModeratingMessage(true);
+    try {
+      const res = await fetch(`/api/messages/${msg.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moderation_hidden: !msg.moderation_hidden }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Could not update message");
+      }
+      const updated: Message = await res.json();
+      setMessages((prev) =>
+        prev.map((m) => (m.id === updated.id ? updated : m))
+      );
+      setSelectedMessageId(updated.id);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Could not update message");
+    } finally {
+      setModeratingMessage(false);
+    }
+  }
+
   // Load messages for selected conversation
   useEffect(() => {
     if (!selected) return;
+    setSelectedMessageId(null);
 
     async function loadMessages() {
       const res = await fetch(`/api/messages?conversation_id=${selected!.id}`);
@@ -737,6 +770,21 @@ export default function AdminPage() {
               body: JSON.stringify({ unread_count: 0 }),
             });
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${selected.id}`,
+        },
+        (payload) => {
+          const msg = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msg.id ? msg : m))
+          );
         }
       )
       .subscribe();
@@ -2031,6 +2079,9 @@ export default function AdminPage() {
                   // (look for first admin persona — it's the original admin_username snapshot)
                 }
 
+                const hidden = Boolean(msg.moderation_hidden);
+                const isSelected = selectedMessageId === msg.id;
+
                 return (
                   <div
                     key={msg.id}
@@ -2048,17 +2099,17 @@ export default function AdminPage() {
                           : selected.user_username}
                       </p>
                     )}
-                    <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 relative ${
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedMessageId(isSelected ? null : msg.id)
+                      }
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 relative text-left transition ${
                         isAdmin
                           ? "bubble-user rounded-br-sm"
                           : "bubble-admin rounded-bl-sm"
-                      }`}
-                      style={{
-                        background: isAdmin
-                          ? "var(--bubble-user)"
-                          : "var(--bubble-admin)",
-                      }}
+                      } ${isSelected ? "ring-2 ring-[#fffc00]" : ""}`}
+                      style={moderationBubbleStyle(hidden, isAdmin)}
                     >
                       {msg.file_url && msg.file_type === "image" && (
                         <img
@@ -2071,27 +2122,94 @@ export default function AdminPage() {
                         <VideoMessage src={msg.file_url} />
                       )}
                       {msg.content && (
-                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isAdmin ? "text-black" : "text-white"}`}>
-                          {linkifyText(msg.content, isAdmin)}
+                        <p
+                          className={`text-sm leading-relaxed whitespace-pre-wrap ${moderationTextClass(hidden, isAdmin)}`}
+                        >
+                          {linkifyText(msg.content, isAdmin && !hidden)}
                         </p>
                       )}
                       <p
                         className={`text-xs mt-1 ${
                           isAdmin ? "text-right" : "text-left"
                         }`}
-                        style={{ color: isAdmin ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.45)" }}
+                        style={{
+                          color: hidden
+                            ? "rgba(254, 202, 202, 0.75)"
+                            : isAdmin
+                              ? "rgba(0,0,0,0.45)"
+                              : "rgba(255,255,255,0.45)",
+                        }}
                       >
                         {new Date(msg.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </p>
-                    </div>
+                    </button>
+                    {hidden && (
+                      <p
+                        className={`text-xs mt-1.5 px-1 max-w-[75%] ${
+                          isAdmin ? "text-right" : "text-left"
+                        }`}
+                        style={{ color: "#f87171" }}
+                      >
+                        {MODERATION_NOTICE}
+                      </p>
+                    )}
                   </div>
                 );
               })}
               <div ref={bottomRef} />
             </div>
+
+            {selectedMessageId && (
+              <div
+                className="px-4 py-2.5 flex items-center gap-2 flex-wrap"
+                style={{
+                  background: "var(--surface)",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <span className="text-xs flex-1 min-w-0" style={{ color: "var(--text-muted)" }}>
+                  Message selected — tap again to deselect
+                </span>
+                <button
+                  type="button"
+                  disabled={moderatingMessage}
+                  onClick={() => {
+                    const msg = messages.find((m) => m.id === selectedMessageId);
+                    if (msg) toggleMessageModeration(msg);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
+                  style={{
+                    background: messages.find((m) => m.id === selectedMessageId)
+                      ?.moderation_hidden
+                      ? "var(--surface2)"
+                      : "#dc2626",
+                    color: messages.find((m) => m.id === selectedMessageId)
+                      ?.moderation_hidden
+                      ? "var(--text)"
+                      : "#fff",
+                  }}
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  {moderatingMessage
+                    ? "Saving…"
+                    : messages.find((m) => m.id === selectedMessageId)
+                          ?.moderation_hidden
+                      ? "Restore message"
+                      : "Hide for guidelines"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMessageId(null)}
+                  className="px-3 py-2 rounded-xl text-xs font-medium"
+                  style={{ background: "var(--surface2)", color: "var(--text-muted)" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
 
             {/* File preview */}
             {preview && (

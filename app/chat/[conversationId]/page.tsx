@@ -7,6 +7,11 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
 import { linkifyText } from "@/lib/linkify";
+import {
+  MODERATION_NOTICE,
+  moderationBubbleStyle,
+  moderationTextClass,
+} from "@/lib/message-moderation";
 import { ModelAvatar } from "@/components/ModelAvatar";
 import { ChatLockModal } from "@/components/ChatLockModal";
 import {
@@ -213,6 +218,21 @@ export default function ChatPage() {
           setTimeout(scrollToBottom, 50);
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updated.id ? updated : m))
+          );
+        }
+      )
       .subscribe();
 
     // Also subscribe to conversation updates (admin_username changes)
@@ -402,6 +422,7 @@ export default function ChatPage() {
 
       const isUser = msg.sender_type === "user";
       const prevMsg = visibleMessages[i - 1];
+      const hidden = Boolean(msg.moderation_hidden);
 
       const showName =
         !isUser &&
@@ -425,9 +446,7 @@ export default function ChatPage() {
             className={`max-w-[85%] rounded-2xl relative ${
               msg.file_url ? "p-1.5" : "px-4 py-2.5"
             } ${isUser ? "bubble-user rounded-br-sm" : "bubble-admin rounded-bl-sm"}`}
-            style={{
-              background: isUser ? "var(--bubble-user)" : "var(--bubble-admin)",
-            }}
+            style={moderationBubbleStyle(hidden, isUser)}
           >
             {msg.file_url && msg.file_type === "image" && (
               <img
@@ -440,17 +459,35 @@ export default function ChatPage() {
               <VideoMessage src={msg.file_url} onReady={scrollToBottom} />
             )}
             {msg.content && (
-              <p className={`text-sm leading-relaxed whitespace-pre-wrap px-2.5 pt-1 ${isUser ? "text-black" : "text-white"}`}>
-                {linkifyText(msg.content, isUser)}
+              <p
+                className={`text-sm leading-relaxed whitespace-pre-wrap px-2.5 pt-1 ${moderationTextClass(hidden, isUser)}`}
+              >
+                {linkifyText(msg.content, isUser && !hidden)}
               </p>
             )}
             <p
               className={`text-xs px-2.5 pb-1 pt-0.5 ${msg.file_url && !msg.content ? "text-right" : isUser ? "text-right" : "text-left"}`}
-              style={{ color: isUser ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.55)" }}
+              style={{
+                color: hidden
+                  ? "rgba(254, 202, 202, 0.75)"
+                  : isUser
+                    ? "rgba(0,0,0,0.5)"
+                    : "rgba(255,255,255,0.55)",
+              }}
             >
               {formatTime(msg.created_at)}
             </p>
           </div>
+          {hidden && (
+            <p
+              className={`text-xs mt-1.5 px-1 max-w-[85%] ${
+                isUser ? "text-right" : "text-left"
+              }`}
+              style={{ color: "#f87171" }}
+            >
+              {MODERATION_NOTICE}
+            </p>
+          )}
         </div>
       );
     });

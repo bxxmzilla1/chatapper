@@ -313,3 +313,13 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.locked_ips;
   END IF;
 END $$;
+
+-- ============================================================
+-- MIGRATION 12: Message moderation (red hidden / guidelines)
+-- ============================================================
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS moderation_hidden BOOLEAN NOT NULL DEFAULT false;
+
+DROP POLICY IF EXISTS "Public update messages" ON public.messages;
+CREATE POLICY "Public update messages"
+  ON public.messages FOR UPDATE TO anon, authenticated USING (true);
