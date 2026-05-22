@@ -78,6 +78,8 @@ import {
   Pencil,
   Settings,
   Upload,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 
 function VerifiedBadge({ size = 14 }: { size?: number }) {
@@ -161,6 +163,11 @@ export default function AdminPage() {
   const [settingsError, setSettingsError] = useState("");
   const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
   const bgVideoRef = useRef<HTMLInputElement>(null);
+  const [personaMode, setPersonaMode] = useState<"random" | "fixed">("random");
+  const [fixedPersonaName, setFixedPersonaName] = useState("");
+  const [lockContactName, setLockContactName] = useState("her");
+  const [lockButtonUrl, setLockButtonUrl] = useState("");
+  const [lockButtonLabel, setLockButtonLabel] = useState("Message on OnlyFans");
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -218,6 +225,16 @@ export default function AdminPage() {
     if (sidebarTab === "links") loadModels();
   }, [sidebarTab, loadModels]);
 
+  const applySettingsFromData = useCallback((data: AppSettings) => {
+    setLandingSettings(data);
+    setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+    setPersonaMode(data.persona_mode === "fixed" ? "fixed" : "random");
+    setFixedPersonaName(data.fixed_persona_name ?? "");
+    setLockContactName(data.lock_contact_name ?? "her");
+    setLockButtonUrl(data.lock_button_url ?? "");
+    setLockButtonLabel(data.lock_button_label ?? "Message on OnlyFans");
+  }, []);
+
   const loadSettings = useCallback(async () => {
     try {
       setSettingsError("");
@@ -226,20 +243,41 @@ export default function AdminPage() {
       if (!res.ok) {
         throw new Error(data.error || "Could not load settings");
       }
-      setLandingSettings(data);
-      setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+      applySettingsFromData(data);
     } catch (err) {
       setSettingsError(
         err instanceof Error
           ? err.message
-          : "Could not load settings. Run Migration 5 in supabase/schema.sql."
+          : "Could not load settings. Run migrations in supabase/schema.sql."
       );
     }
-  }, []);
+  }, [applySettingsFromData]);
 
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    const settingsChannel = supabase
+      .channel("admin-app-settings")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "app_settings",
+          filter: "id=eq.landing",
+        },
+        (payload) => {
+          applySettingsFromData(payload.new as AppSettings);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsChannel);
+    };
+  }, [applySettingsFromData]);
 
   useEffect(() => {
     if (sidebarTab === "settings") {
@@ -264,8 +302,7 @@ export default function AdminPage() {
             "Could not save settings. Add the app_settings table (Migration 5 in supabase/schema.sql)."
         );
       }
-      setLandingSettings(data);
-      setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+      applySettingsFromData(data);
       return data as AppSettings;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed";
@@ -336,6 +373,26 @@ export default function AdminPage() {
 
   const previewVideoUrl =
     localVideoPreview ?? landingSettings?.background_video_url ?? null;
+
+  async function savePersonaSettings() {
+    await patchSettings({
+      persona_mode: personaMode,
+      fixed_persona_name: personaMode === "fixed" ? fixedPersonaName : null,
+    });
+  }
+
+  async function saveLockConfig() {
+    await patchSettings({
+      lock_contact_name: lockContactName,
+      lock_button_url: lockButtonUrl || null,
+      lock_button_label: lockButtonLabel,
+    });
+  }
+
+  async function toggleChatLock() {
+    const next = !landingSettings?.chat_locked;
+    await patchSettings({ chat_locked: next });
+  }
 
   // Badge is visible only when the conversation's current persona IS the original model name
   function showModelBadge(conv: Conversation) {
@@ -1308,6 +1365,107 @@ export default function AdminPage() {
               className="rounded-2xl p-4 mb-6 flex flex-col gap-4"
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
+              <p className="text-sm font-semibold text-white">Chat persona (new users)</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Choose a random name for each new chat, or use one name for everyone. Model links still use the model&apos;s name.
+              </p>
+              <div className="flex gap-2">
+                {(["random", "fixed"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setPersonaMode(mode)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition"
+                    style={{
+                      background: personaMode === mode ? "var(--accent)" : "var(--surface2)",
+                      color: personaMode === mode ? "#0a0a0a" : "var(--text-muted)",
+                    }}
+                  >
+                    {mode === "random" ? "Random names" : "One name only"}
+                  </button>
+                ))}
+              </div>
+              {personaMode === "fixed" && (
+                <input
+                  type="text"
+                  value={fixedPersonaName}
+                  onChange={(e) => setFixedPersonaName(e.target.value)}
+                  placeholder="e.g. Violet"
+                  maxLength={30}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                />
+              )}
+              <button
+                type="button"
+                onClick={savePersonaSettings}
+                disabled={savingSettings || (personaMode === "fixed" && !fixedPersonaName.trim())}
+                className="py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{ background: "var(--accent)", color: "#0a0a0a" }}
+              >
+                Save persona settings
+              </button>
+            </div>
+
+            <div
+              className="rounded-2xl p-4 mb-6 flex flex-col gap-4"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <p className="text-sm font-semibold text-white">User lock popup</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Shows a popup on all user chats. They can still read messages; only you can turn it off. Use the Lock button in any chat header for quick toggle.
+              </p>
+              <div>
+                <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Custom name in message</label>
+                <input
+                  type="text"
+                  value={lockContactName}
+                  onChange={(e) => setLockContactName(e.target.value)}
+                  placeholder="e.g. Violet"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Button link URL</label>
+                <input
+                  type="url"
+                  value={lockButtonUrl}
+                  onChange={(e) => setLockButtonUrl(e.target.value)}
+                  placeholder="https://onlyfans.com/…"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Button text</label>
+                <input
+                  type="text"
+                  value={lockButtonLabel}
+                  onChange={(e) => setLockButtonLabel(e.target.value)}
+                  placeholder="Message on OnlyFans"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={saveLockConfig}
+                disabled={savingSettings}
+                className="py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{ background: "var(--surface2)", color: "var(--text)" }}
+              >
+                Save lock popup text
+              </button>
+              <p className="text-xs" style={{ color: landingSettings?.chat_locked ? "#f87171" : "var(--text-muted)" }}>
+                Status: {landingSettings?.chat_locked ? "Locked for all users" : "Unlocked"}
+              </p>
+            </div>
+
+            <div
+              className="rounded-2xl p-4 mb-6 flex flex-col gap-4"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
               <p className="text-sm font-semibold text-white">Background video</p>
 
               {previewVideoUrl ? (
@@ -1458,6 +1616,25 @@ export default function AdminPage() {
                   </span>
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={toggleChatLock}
+                disabled={savingSettings}
+                title={landingSettings?.chat_locked ? "Unlock all user chats" : "Lock all user chats"}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95 disabled:opacity-50 flex-shrink-0"
+                style={{
+                  background: landingSettings?.chat_locked ? "#dc2626" : "var(--surface2)",
+                  color: landingSettings?.chat_locked ? "#fff" : "var(--accent-light)",
+                  border: `1px solid ${landingSettings?.chat_locked ? "#dc2626" : "var(--border)"}`,
+                }}
+              >
+                {landingSettings?.chat_locked ? (
+                  <LockOpen className="w-4 h-4" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                {landingSettings?.chat_locked ? "Unlock" : "Lock"}
+              </button>
             </div>
 
             {/* Messages */}

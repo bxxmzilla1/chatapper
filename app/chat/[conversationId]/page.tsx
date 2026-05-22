@@ -8,11 +8,11 @@ import { supabase } from "@/lib/supabase";
 import type { Message, Conversation } from "@/lib/types";
 import { linkifyText } from "@/lib/linkify";
 import { ModelAvatar } from "@/components/ModelAvatar";
+import { ChatLockModal } from "@/components/ChatLockModal";
 import {
   Send,
   Paperclip,
   Circle,
-  Shuffle,
   Heart,
 } from "lucide-react";
 
@@ -38,8 +38,11 @@ export default function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [converting, setConverting] = useState(false);
   const [convertPct, setConvertPct] = useState(0);
-  const [switching, setSwitching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [chatLocked, setChatLocked] = useState(false);
+  const [lockContactName, setLockContactName] = useState("her");
+  const [lockButtonUrl, setLockButtonUrl] = useState<string | null>(null);
+  const [lockButtonLabel, setLockButtonLabel] = useState("Message on OnlyFans");
   const [modelAvatarUrl, setModelAvatarUrl] = useState<string | null>(null);
   const [isModelPersona, setIsModelPersona] = useState(false);
   // Tracks all persona names the user has "matched" with in order
@@ -83,6 +86,52 @@ export default function ChatPage() {
     }
     load();
   }, [conversationId, router]);
+
+  function applyLockSettings(data: {
+    chat_locked?: boolean;
+    lock_contact_name?: string | null;
+    lock_button_url?: string | null;
+    lock_button_label?: string | null;
+  }) {
+    setChatLocked(Boolean(data.chat_locked));
+    setLockContactName(data.lock_contact_name?.trim() || "her");
+    setLockButtonUrl(data.lock_button_url ?? null);
+    setLockButtonLabel(data.lock_button_label?.trim() || "Message on OnlyFans");
+  }
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !data.error) applyLockSettings(data);
+      })
+      .catch(() => {});
+
+    const settingsChannel = supabase
+      .channel("app-settings-lock")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "app_settings",
+          filter: "id=eq.landing",
+        },
+        (payload) => {
+          applyLockSettings(payload.new as typeof payload.new & {
+            chat_locked?: boolean;
+            lock_contact_name?: string | null;
+            lock_button_url?: string | null;
+            lock_button_label?: string | null;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsChannel);
+    };
+  }, []);
 
   // Load messages
   useEffect(() => {
@@ -147,6 +196,7 @@ export default function ChatPage() {
 
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault();
+    if (chatLocked) return;
     const trimmed = input.trim();
     if (!trimmed) return;
     if (sending || uploading) return;
@@ -177,30 +227,8 @@ export default function ChatPage() {
     }
   }
 
-  async function handleSwitchMatch() {
-    if (switching) return;
-    setSwitching(true);
-
-    try {
-      const res = await fetch(
-        `/api/conversations/${conversationId}/switch`,
-        { method: "POST" }
-      );
-      if (!res.ok) throw new Error("Switch failed");
-      const data = await res.json();
-      // Update local match history so the transition card shows immediately
-      setMatchHistory((prev) => [...prev, data.admin_username]);
-      // New persona is a random match — clear model avatar and verified badge
-      setModelAvatarUrl(null);
-      setIsModelPersona(false);
-    } catch {
-      // silently handle
-    } finally {
-      setSwitching(false);
-    }
-  }
-
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (chatLocked) return;
     let file = e.target.files?.[0];
     if (!file) return;
     if (fileRef.current) fileRef.current.value = "";
@@ -373,7 +401,14 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="page-shell" style={{ background: "var(--bg)" }}>
+    <div className="page-shell relative" style={{ background: "var(--bg)" }}>
+      {chatLocked && (
+        <ChatLockModal
+          contactName={lockContactName}
+          buttonUrl={lockButtonUrl}
+          buttonLabel={lockButtonLabel}
+        />
+      )}
 
       {/* Header */}
       <div
@@ -412,18 +447,6 @@ export default function ChatPage() {
             )}
           </p>
         </div>
-
-        {/* New Match button */}
-        <button
-          onClick={handleSwitchMatch}
-          disabled={switching}
-          title="Find a new match"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition active:scale-95 disabled:opacity-50"
-          style={{ background: "var(--surface2)", color: "var(--accent-light)" }}
-        >
-          <Shuffle className={`w-4 h-4 ${switching ? "animate-spin" : ""}`} />
-          {switching ? "Matching…" : "New Match"}
-        </button>
 
       </div>
 
@@ -505,7 +528,8 @@ export default function ChatPage() {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="p-2.5 rounded-xl flex-shrink-0 transition hover:opacity-70"
+          disabled={chatLocked}
+          className="p-2.5 rounded-xl flex-shrink-0 transition hover:opacity-70 disabled:opacity-40"
           style={{ background: "var(--surface2)" }}
         >
           <Paperclip className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
@@ -525,9 +549,10 @@ export default function ChatPage() {
               setInput(e.target.value);
               resizeTextarea();
             }}
-            placeholder="Message…"
+            placeholder={chatLocked ? "Messaging locked" : "Message…"}
             rows={1}
-            className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed overflow-y-auto w-full"
+            disabled={chatLocked}
+            className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed overflow-y-auto w-full disabled:opacity-50"
             style={{
               color: "var(--text)",
               minHeight: "24px",
@@ -538,7 +563,7 @@ export default function ChatPage() {
 
         <button
           type="submit"
-          disabled={sending || uploading || !input.trim()}
+          disabled={chatLocked || sending || uploading || !input.trim()}
           className="p-3 rounded-xl flex-shrink-0 transition active:scale-95 disabled:opacity-40"
           style={{ background: "var(--accent)" }}
         >

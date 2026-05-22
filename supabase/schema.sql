@@ -213,3 +213,34 @@ CREATE POLICY "Public update app_settings"
 -- ============================================================
 ALTER TABLE public.conversations
   ADD COLUMN IF NOT EXISTS model_avatar_url TEXT;
+
+-- ============================================================
+-- MIGRATION 7: Persona mode + global user chat lock popup
+-- ============================================================
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS persona_mode TEXT NOT NULL DEFAULT 'random';
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS fixed_persona_name TEXT;
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS chat_locked BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS lock_contact_name TEXT DEFAULT 'her';
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS lock_button_url TEXT;
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS lock_button_label TEXT DEFAULT 'Message on OnlyFans';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'app_settings'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.app_settings;
+  END IF;
+END $$;

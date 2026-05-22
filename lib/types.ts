@@ -51,18 +51,36 @@ export type Database = {
           id: string;
           background_video_url: string | null;
           overlay_opacity: number;
+          persona_mode: "random" | "fixed";
+          fixed_persona_name: string | null;
+          chat_locked: boolean;
+          lock_contact_name: string | null;
+          lock_button_url: string | null;
+          lock_button_label: string | null;
           updated_at: string;
         };
         Insert: {
           id?: string;
           background_video_url?: string | null;
           overlay_opacity?: number;
+          persona_mode?: "random" | "fixed";
+          fixed_persona_name?: string | null;
+          chat_locked?: boolean;
+          lock_contact_name?: string | null;
+          lock_button_url?: string | null;
+          lock_button_label?: string | null;
           updated_at?: string;
         };
         Update: {
           id?: string;
           background_video_url?: string | null;
           overlay_opacity?: number;
+          persona_mode?: "random" | "fixed";
+          fixed_persona_name?: string | null;
+          chat_locked?: boolean;
+          lock_contact_name?: string | null;
+          lock_button_url?: string | null;
+          lock_button_label?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
-import { getRandomGirlName } from "@/lib/girl-names";
+import { resolveAdminPersona } from "@/lib/persona";
 
 export async function POST(req: NextRequest) {
   const { username, city, country, country_code, model_slug, admin_username } = await req.json();
@@ -10,8 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServerClient();
-  // Use model's name when coming from a model page, otherwise random girl name
-  const adminUsername = admin_username ?? getRandomGirlName();
+  const adminUsername = await resolveAdminPersona(supabase, admin_username);
 
   const { data, error } = await supabase
     .from("conversations")
