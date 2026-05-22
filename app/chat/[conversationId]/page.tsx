@@ -75,6 +75,7 @@ export default function ChatPage() {
       }
       const data = await res.json();
       setConversation(data);
+      setChatLocked(Boolean(data.chat_locked));
       setMatchHistory([data.admin_username]);
       if (data.model_avatar_url) {
         setModelAvatarUrl(data.model_avatar_url);
@@ -92,13 +93,11 @@ export default function ChatPage() {
     load();
   }, [conversationId, router]);
 
-  function applyLockSettings(data: {
-    chat_locked?: boolean;
+  function applyLockPopupConfig(data: {
     lock_contact_name?: string | null;
     lock_button_url?: string | null;
     lock_button_label?: string | null;
   }) {
-    setChatLocked(Boolean(data.chat_locked));
     setLockContactName(data.lock_contact_name?.trim() || "her");
     setLockButtonUrl(data.lock_button_url ?? null);
     setLockButtonLabel(data.lock_button_label?.trim() || "Message on OnlyFans");
@@ -108,12 +107,12 @@ export default function ChatPage() {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
-        if (data && !data.error) applyLockSettings(data);
+        if (data && !data.error) applyLockPopupConfig(data);
       })
       .catch(() => {});
 
     const settingsChannel = supabase
-      .channel("app-settings-lock")
+      .channel("app-settings-lock-popup")
       .on(
         "postgres_changes",
         {
@@ -123,12 +122,13 @@ export default function ChatPage() {
           filter: "id=eq.landing",
         },
         (payload) => {
-          applyLockSettings(payload.new as typeof payload.new & {
-            chat_locked?: boolean;
-            lock_contact_name?: string | null;
-            lock_button_url?: string | null;
-            lock_button_label?: string | null;
-          });
+          applyLockPopupConfig(
+            payload.new as {
+              lock_contact_name?: string | null;
+              lock_button_url?: string | null;
+              lock_button_label?: string | null;
+            }
+          );
         }
       )
       .subscribe();
@@ -189,6 +189,7 @@ export default function ChatPage() {
         (payload) => {
           const updated = payload.new as Conversation;
           setConversation(updated);
+          setChatLocked(Boolean(updated.chat_locked));
         }
       )
       .subscribe();
@@ -410,6 +411,8 @@ export default function ChatPage() {
       {chatLocked && (
         <ChatLockModal
           contactName={lockContactName}
+          personaName={currentPersona}
+          avatarUrl={modelAvatarUrl}
           buttonUrl={lockButtonUrl}
           buttonLabel={lockButtonLabel}
         />

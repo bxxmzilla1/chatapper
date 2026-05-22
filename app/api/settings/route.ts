@@ -29,7 +29,6 @@ export async function GET() {
     ...DEFAULT_APP_SETTINGS,
     ...data,
     persona_mode: data.persona_mode === "fixed" ? "fixed" : "random",
-    chat_locked: Boolean(data.chat_locked),
   });
 }
 
@@ -71,10 +70,6 @@ export async function PATCH(req: NextRequest) {
       body.fixed_persona_avatar_url.trim()
         ? body.fixed_persona_avatar_url.trim()
         : null;
-  }
-
-  if ("chat_locked" in body) {
-    updates.chat_locked = Boolean(body.chat_locked);
   }
 
   if ("lock_contact_name" in body) {

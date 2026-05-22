@@ -250,3 +250,9 @@ END $$;
 -- ============================================================
 ALTER TABLE public.app_settings
   ADD COLUMN IF NOT EXISTS fixed_persona_avatar_url TEXT;
+
+-- ============================================================
+-- MIGRATION 9: Per-conversation chat lock (not global)
+-- ============================================================
+ALTER TABLE public.conversations
+  ADD COLUMN IF NOT EXISTS chat_locked BOOLEAN NOT NULL DEFAULT false;

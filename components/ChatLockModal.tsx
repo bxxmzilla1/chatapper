@@ -1,13 +1,19 @@
 "use client";
 
+import { ModelAvatar } from "@/components/ModelAvatar";
+
 type ChatLockModalProps = {
   contactName: string;
+  personaName: string;
+  avatarUrl: string | null;
   buttonUrl: string | null;
   buttonLabel: string;
 };
 
 export function ChatLockModal({
   contactName,
+  personaName,
+  avatarUrl,
   buttonUrl,
   buttonLabel,
 }: ChatLockModalProps) {
@@ -30,6 +36,25 @@ export function ChatLockModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="flex justify-center mb-4">
+          <div
+            className="rounded-full p-0.5"
+            style={{
+              background: "linear-gradient(135deg, #fffc00, #facc15)",
+            }}
+          >
+            <div
+              className="rounded-full overflow-hidden"
+              style={{ background: "var(--surface)" }}
+            >
+              <ModelAvatar
+                url={avatarUrl}
+                name={personaName}
+                className="w-20 h-20 rounded-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
         <p
           id="chat-lock-title"
           className="text-base font-semibold leading-relaxed text-white"

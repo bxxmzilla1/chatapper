@@ -15,6 +15,7 @@ export type Database = {
           user_country_code: string | null;
           model_slug: string | null;
           model_avatar_url: string | null;
+          chat_locked: boolean;
         };
         Insert: {
           id?: string;
@@ -29,6 +30,7 @@ export type Database = {
           user_country_code?: string | null;
           model_slug?: string | null;
           model_avatar_url?: string | null;
+          chat_locked?: boolean;
         };
         Update: {
           id?: string;
@@ -43,6 +45,7 @@ export type Database = {
           user_country_code?: string | null;
           model_slug?: string | null;
           model_avatar_url?: string | null;
+          chat_locked?: boolean;
         };
         Relationships: [];
       };

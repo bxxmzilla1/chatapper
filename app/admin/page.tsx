@@ -422,8 +422,26 @@ export default function AdminPage() {
   }
 
   async function toggleChatLock() {
-    const next = !landingSettings?.chat_locked;
-    await patchSettings({ chat_locked: next });
+    if (!selected) return;
+    const next = !selected.chat_locked;
+    try {
+      const res = await fetch(`/api/conversations/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_locked: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Could not update lock");
+      }
+      const updated: Conversation = await res.json();
+      setSelected(updated);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c))
+      );
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Could not update lock");
+    }
   }
 
   // Badge is visible only when the conversation's current persona IS the original model name
@@ -1520,7 +1538,7 @@ export default function AdminPage() {
             >
               <p className="text-sm font-semibold text-white">User lock popup</p>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Shows a popup on all user chats. They can still read messages; only you can turn it off. Use the Lock button in any chat header for quick toggle.
+                Message and button shown when you lock a chat. Use the Lock button in that chat&apos;s header — only that user is locked. They can still read messages until you unlock.
               </p>
               <div>
                 <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Custom name in message</label>
@@ -1564,9 +1582,6 @@ export default function AdminPage() {
               >
                 Save lock popup text
               </button>
-              <p className="text-xs" style={{ color: landingSettings?.chat_locked ? "#f87171" : "var(--text-muted)" }}>
-                Status: {landingSettings?.chat_locked ? "Locked for all users" : "Unlocked"}
-              </p>
             </div>
 
             <div
@@ -1726,21 +1741,20 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={toggleChatLock}
-                disabled={savingSettings}
-                title={landingSettings?.chat_locked ? "Unlock all user chats" : "Lock all user chats"}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95 disabled:opacity-50 flex-shrink-0"
+                title={selected.chat_locked ? "Unlock this chat" : "Lock this chat"}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95 flex-shrink-0"
                 style={{
-                  background: landingSettings?.chat_locked ? "#dc2626" : "var(--surface2)",
-                  color: landingSettings?.chat_locked ? "#fff" : "var(--accent-light)",
-                  border: `1px solid ${landingSettings?.chat_locked ? "#dc2626" : "var(--border)"}`,
+                  background: selected.chat_locked ? "#dc2626" : "var(--surface2)",
+                  color: selected.chat_locked ? "#fff" : "var(--accent-light)",
+                  border: `1px solid ${selected.chat_locked ? "#dc2626" : "var(--border)"}`,
                 }}
               >
-                {landingSettings?.chat_locked ? (
+                {selected.chat_locked ? (
                   <LockOpen className="w-4 h-4" />
                 ) : (
                   <Lock className="w-4 h-4" />
                 )}
-                {landingSettings?.chat_locked ? "Unlock" : "Lock"}
+                {selected.chat_locked ? "Unlock" : "Lock"}
               </button>
             </div>
 
