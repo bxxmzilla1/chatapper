@@ -580,7 +580,7 @@ export default function AdminPage() {
           className="px-4 py-4 flex items-center justify-between"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          <h1 className="font-bold text-lg text-white">Admin Panel</h1>
+          <h1 className="font-bold text-lg" style={{ color: "var(--text)" }}>Admin Panel</h1>
           <button
             onClick={handleLogout}
             className="p-2 rounded-xl transition hover:opacity-70"
@@ -600,7 +600,7 @@ export default function AdminPage() {
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition"
               style={{
                 background: sidebarTab === tab ? "var(--accent)" : "var(--surface2)",
-                color: sidebarTab === tab ? "#fff" : "var(--text-muted)",
+                color: sidebarTab === tab ? "#0a0a0a" : "var(--text-muted)",
               }}
             >
               {tab === "chats" ? <MessageSquare className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
@@ -697,7 +697,7 @@ export default function AdminPage() {
                   {/* Avatar with unread dot */}
                   <div className="relative flex-shrink-0 mt-0.5">
                     <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-black text-sm"
                       style={{ background: "var(--accent)" }}
                     >
                       {conv.user_username[0].toUpperCase()}
@@ -716,7 +716,7 @@ export default function AdminPage() {
                     {/* Row 1: name + time */}
                     <div className="flex items-center justify-between gap-2">
                       <p
-                        className="font-semibold text-sm truncate text-white"
+                        className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}
                         style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
                       >
                         {conv.user_username}
@@ -780,7 +780,7 @@ export default function AdminPage() {
               <button
                 onClick={() => setShowNewModel(v => !v)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm transition active:scale-[0.98]"
-                style={{ background: "var(--accent)", color: "#fff" }}
+                style={{ background: "var(--accent)", color: "#0a0a0a" }}
               >
                 <Plus className="w-4 h-4" />
                 New Link
@@ -875,7 +875,7 @@ export default function AdminPage() {
                     type="submit"
                     disabled={savingModel}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-50"
-                    style={{ background: "var(--accent)", color: "#fff" }}
+                    style={{ background: "var(--accent)", color: "#0a0a0a" }}
                   >
                     {savingModel ? "Creating…" : "Create"}
                   </button>
@@ -886,7 +886,7 @@ export default function AdminPage() {
             {/* Model list */}
             {modelsLoading ? (
               <div className="flex justify-center py-8">
-                <div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
               </div>
             ) : models.length === 0 && !showNewModel ? (
               <div className="flex flex-col items-center py-12 gap-2">
@@ -902,14 +902,14 @@ export default function AdminPage() {
                     {m.avatar_url ? (
                       <img src={optimizeAvatarUrl(m.avatar_url) ?? ""} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={m.name} />
                     ) : (
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-black flex-shrink-0" style={{ background: "var(--accent)" }}>
                         {m.name[0]}
                       </div>
                     )}
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <p className="font-semibold text-white text-sm truncate">{m.name}</p>
+                        <p className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{m.name}</p>
                         <VerifiedBadge size={14} />
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
@@ -958,7 +958,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => duplicatingSlug === m.slug ? setDuplicatingSlug(null) : openDuplicate(m)}
                         className="p-1.5 rounded-lg transition hover:opacity-70"
-                        style={{ background: duplicatingSlug === m.slug ? "var(--accent)" : "var(--surface)", color: duplicatingSlug === m.slug ? "#fff" : "var(--text-muted)" }}
+                        style={{ background: duplicatingSlug === m.slug ? "var(--accent)" : "var(--surface)", color: duplicatingSlug === m.slug ? "#0a0a0a" : "var(--text-muted)" }}
                         title="Duplicate link"
                       >
                         <GitBranch className="w-3.5 h-3.5" />
@@ -977,7 +977,7 @@ export default function AdminPage() {
                       {/* Toggle row */}
                       <div className="flex items-center justify-between pt-3">
                         <div className="flex flex-col gap-0.5">
-                          <p className="text-xs font-semibold text-white">
+                          <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>
                             {redirectToggleOn ? "Redirect URL" : "Landing Page"}
                           </p>
                           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -1043,7 +1043,7 @@ export default function AdminPage() {
                         </button>
                         <button onClick={() => saveDuplicate(m)} disabled={savingDuplicate || !duplicateNewSlug.trim()}
                           className="flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
-                          style={{ background: "var(--accent)", color: "#fff" }}>
+                          style={{ background: "var(--accent)", color: "#0a0a0a" }}>
                           {savingDuplicate ? "Creating…" : "Duplicate"}
                         </button>
                       </div>
@@ -1053,7 +1053,7 @@ export default function AdminPage() {
                   {/* ── Edit profile panel ── */}
                   {editingModelSlug === m.slug && (
                     <div className="px-3 pb-3 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
-                      <p className="text-xs pt-3 font-semibold text-white">Edit Profile</p>
+                      <p className="text-xs pt-3 font-semibold" style={{ color: "var(--text)" }}>Edit Profile</p>
 
                       {/* Avatar */}
                       <div
@@ -1132,7 +1132,7 @@ export default function AdminPage() {
                           onClick={() => saveEditModel(m)}
                           disabled={savingEditModel}
                           className="flex-1 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-50"
-                          style={{ background: "var(--accent)", color: "#fff" }}>
+                          style={{ background: "var(--accent)", color: "#0a0a0a" }}>
                           {savingEditModel ? "Saving…" : "Save Changes"}
                         </button>
                       </div>
@@ -1157,7 +1157,7 @@ export default function AdminPage() {
               className="w-16 h-16"
               style={{ color: "var(--border)" }}
             />
-            <p className="text-lg font-medium text-white">
+            <p className="text-lg font-medium" style={{ color: "var(--text)" }}>
               Select a conversation
             </p>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -1182,14 +1182,14 @@ export default function AdminPage() {
                 <ArrowLeft className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
               </button>
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-black text-sm flex-shrink-0"
                 style={{ background: "var(--accent)" }}
               >
                 {selected.user_username[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-white truncate">
+                  <p className="font-semibold truncate" style={{ color: "var(--text)" }}>
                     {selected.user_username}
                   </p>
                   {selected.user_country_code && (
@@ -1258,7 +1258,7 @@ export default function AdminPage() {
                             />
                           </svg>
                           User switched persona → now{" "}
-                          <span className="font-bold text-white">{newName}</span>
+                          <span className="font-bold" style={{ color: "var(--text)" }}>{newName}</span>
                         </div>
                         <div
                           className="flex-1 h-px"
@@ -1347,15 +1347,15 @@ export default function AdminPage() {
                         <VideoMessage src={msg.file_url} />
                       )}
                       {msg.content && (
-                        <p className="text-sm leading-relaxed text-white whitespace-pre-wrap">
-                          {linkifyText(msg.content)}
+                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isAdmin ? "text-black" : "text-gray-900"}`}>
+                          {linkifyText(msg.content, isAdmin)}
                         </p>
                       )}
                       <p
                         className={`text-xs mt-1 ${
                           isAdmin ? "text-right" : "text-left"
                         }`}
-                        style={{ color: "rgba(255,255,255,0.45)" }}
+                        style={{ color: "rgba(0,0,0,0.45)" }}
                       >
                         {new Date(msg.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -1401,7 +1401,7 @@ export default function AdminPage() {
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
                     style={{ background: "var(--border)" }}
                   >
-                    <X className="w-3 h-3 text-white" />
+                    <X className="w-3 h-3 text-gray-600" />
                   </button>
                 </div>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -1455,7 +1455,7 @@ export default function AdminPage() {
                   }}
                   placeholder={`Reply as ${selected.admin_username}…`}
                   rows={1}
-                  className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed max-h-32 overflow-y-auto"
+                  className="flex-1 resize-none bg-transparent outline-none text-sm placeholder-gray-400 leading-relaxed max-h-32 overflow-y-auto"
                   style={{ color: "var(--text)" }}
                 />
               </div>
@@ -1465,7 +1465,7 @@ export default function AdminPage() {
                 className="p-3 rounded-xl flex-shrink-0 transition active:scale-95 disabled:opacity-40"
                 style={{ background: "var(--accent)" }}
               >
-                <Send className="w-5 h-5 text-white" />
+                <Send className="w-5 h-5 text-black" />
               </button>
             </form>
           </>

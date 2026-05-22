@@ -361,7 +361,7 @@ export default function ChatPage() {
               <VideoMessage src={msg.file_url} onReady={scrollToBottom} />
             )}
             {msg.content && (
-              <p className={`text-sm leading-relaxed whitespace-pre-wrap px-2.5 pt-1 ${isUser ? "text-black" : "text-white"}`}>
+              <p className={`text-sm leading-relaxed whitespace-pre-wrap px-2.5 pt-1 ${isUser ? "text-black" : "text-gray-900"}`}>
                 {linkifyText(msg.content, isUser)}
               </p>
             )}
@@ -410,7 +410,7 @@ export default function ChatPage() {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <p className="font-semibold text-white truncate">{currentPersona}</p>
+            <p className="font-semibold truncate" style={{ color: "var(--text)" }}>{currentPersona}</p>
             {isModelPersona && <VerifiedBadge size={16} />}
           </div>
           <p className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
@@ -431,7 +431,7 @@ export default function ChatPage() {
           disabled={switching}
           title="Find a new match"
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition active:scale-95 disabled:opacity-50"
-          style={{ background: "var(--surface2)", color: "var(--accent-light)" }}
+          style={{ background: "var(--surface2)", color: "var(--text-muted)" }}
         >
           <Shuffle className={`w-4 h-4 ${switching ? "animate-spin" : ""}`} />
           {switching ? "Matching…" : "New Match"}
@@ -454,7 +454,7 @@ export default function ChatPage() {
               </div>
             )}
             <div className="flex items-center gap-1.5">
-              <p className="font-semibold text-white">{currentPersona}</p>
+              <p className="font-semibold" style={{ color: "var(--text)" }}>{currentPersona}</p>
               {isModelPersona && <VerifiedBadge size={16} />}
             </div>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -544,7 +544,7 @@ export default function ChatPage() {
             }}
             placeholder="Message…"
             rows={1}
-            className="flex-1 resize-none bg-transparent outline-none text-sm text-white placeholder-gray-500 leading-relaxed overflow-y-auto w-full"
+            className="flex-1 resize-none bg-transparent outline-none text-sm placeholder-gray-400 leading-relaxed overflow-y-auto w-full"
             style={{
               color: "var(--text)",
               minHeight: "24px",
@@ -653,7 +653,7 @@ function MatchSwitchCard({ name, time }: { name: string; time: string }) {
         >
           {name[0]}
         </div>
-        <p className="font-semibold text-white text-sm">{name}</p>
+        <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>{name}</p>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           nearby match · {new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </p>
