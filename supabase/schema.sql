@@ -203,3 +203,9 @@ CREATE POLICY "Public read app_settings"
 DROP POLICY IF EXISTS "Public update app_settings" ON public.app_settings;
 CREATE POLICY "Public update app_settings"
   ON public.app_settings FOR UPDATE TO anon, authenticated USING (true);
+
+-- ============================================================
+-- MIGRATION 6: Cache model avatar on conversation for faster chat load
+-- ============================================================
+ALTER TABLE public.conversations
+  ADD COLUMN IF NOT EXISTS model_avatar_url TEXT;

@@ -73,13 +73,16 @@ export default function ChatPage() {
       const data = await res.json();
       setConversation(data);
       setMatchHistory([data.admin_username]);
-      // Fetch model avatar if this chat came from a model page
       if (data.model_slug) {
         setIsModelPersona(true);
-        fetch(`/api/models/${data.model_slug}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
-          .catch(() => {});
+        if (data.model_avatar_url) {
+          setModelAvatarUrl(data.model_avatar_url);
+        } else {
+          fetch(`/api/models/${data.model_slug}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
+            .catch(() => {});
+        }
       }
     }
     load();
@@ -437,7 +440,7 @@ export default function ChatPage() {
               url={modelAvatarUrl}
               name={currentPersona}
               size={320}
-              fallback="muted"
+              fallback="accent"
               className="w-16 h-16 rounded-full object-cover text-2xl"
             />
             <div className="flex items-center gap-1.5">

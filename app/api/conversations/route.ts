@@ -13,6 +13,16 @@ export async function POST(req: NextRequest) {
   // Use model's name when coming from a model page, otherwise random girl name
   const adminUsername = admin_username ?? getRandomGirlName();
 
+  let modelAvatarUrl: string | null = null;
+  if (model_slug) {
+    const { data: model } = await supabase
+      .from("model_profiles")
+      .select("avatar_url")
+      .eq("slug", model_slug)
+      .single();
+    modelAvatarUrl = model?.avatar_url ?? null;
+  }
+
   const { data, error } = await supabase
     .from("conversations")
     .insert({
@@ -22,6 +32,7 @@ export async function POST(req: NextRequest) {
       user_country: country ?? null,
       user_country_code: country_code ?? null,
       model_slug: model_slug ?? null,
+      model_avatar_url: modelAvatarUrl,
     })
     .select()
     .single();

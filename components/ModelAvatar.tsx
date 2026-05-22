@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import { optimizeAvatarUrl } from "@/lib/optimize-avatar";
 
 type ModelAvatarProps = {
@@ -21,31 +21,48 @@ export function ModelAvatar({
   fallback = "accent",
 }: ModelAvatarProps) {
   const optimized = optimizeAvatarUrl(url, size);
+  const [src, setSrc] = useState(optimized ?? url);
+  const [failed, setFailed] = useState(false);
 
-  if (optimized) {
+  useEffect(() => {
+    setSrc(optimizeAvatarUrl(url, size) ?? url);
+    setFailed(false);
+  }, [url, size]);
+
+  if (!url || failed || !src) {
     return (
-      <Image
-        src={optimized}
-        alt={name}
-        width={size}
-        height={size}
-        priority={priority}
-        className={className}
-        unoptimized={false}
-      />
+      <div
+        className={`flex items-center justify-center font-bold shrink-0 ${fallback === "accent" ? "text-black" : "text-white"} ${className}`}
+        style={{
+          background: fallback === "accent" ? "#fffc00" : "var(--surface2)",
+          width: size,
+          height: size,
+          minWidth: size,
+          minHeight: size,
+        }}
+      >
+        {name[0]?.toUpperCase() ?? "?"}
+      </div>
     );
   }
 
   return (
-    <div
-      className={`flex items-center justify-center font-bold ${fallback === "accent" ? "text-black" : "text-white"} ${className}`}
-      style={{
-        background: fallback === "accent" ? "#fffc00" : "var(--surface2)",
-        width: size,
-        height: size,
+    <img
+      src={src}
+      alt={name}
+      width={size}
+      height={size}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      className={className}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      onError={() => {
+        if (url && src !== url) {
+          setSrc(url);
+          return;
+        }
+        setFailed(true);
       }}
-    >
-      {name[0]?.toUpperCase() ?? "?"}
-    </div>
+    />
   );
 }

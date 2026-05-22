@@ -14,6 +14,7 @@ export type Database = {
           user_country: string | null;
           user_country_code: string | null;
           model_slug: string | null;
+          model_avatar_url: string | null;
         };
         Insert: {
           id?: string;
@@ -27,6 +28,7 @@ export type Database = {
           user_country?: string | null;
           user_country_code?: string | null;
           model_slug?: string | null;
+          model_avatar_url?: string | null;
         };
         Update: {
           id?: string;
@@ -40,6 +42,7 @@ export type Database = {
           user_country?: string | null;
           user_country_code?: string | null;
           model_slug?: string | null;
+          model_avatar_url?: string | null;
         };
         Relationships: [];
       };
