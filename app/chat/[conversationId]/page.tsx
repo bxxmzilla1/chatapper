@@ -40,7 +40,9 @@ export default function ChatPage() {
   const [convertPct, setConvertPct] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [chatLocked, setChatLocked] = useState(false);
+  const [lockVariant, setLockVariant] = useState<"global" | "landing">("global");
   const [lockContactName, setLockContactName] = useState("her");
+  const [lockMessage, setLockMessage] = useState<string | null>(null);
   const [lockButtonUrl, setLockButtonUrl] = useState<string | null>(null);
   const [lockButtonLabel, setLockButtonLabel] = useState("Message on OnlyFans");
   const [modelAvatarUrl, setModelAvatarUrl] = useState<string | null>(null);
@@ -80,37 +82,56 @@ export default function ChatPage() {
       if (data.model_avatar_url) {
         setModelAvatarUrl(data.model_avatar_url);
       }
+
+      async function applyLockPopupForConversation(conv: Conversation) {
+        if (conv.model_slug) {
+          try {
+            const modelRes = await fetch(`/api/models/${conv.model_slug}`);
+            if (modelRes.ok) {
+              const model = await modelRes.json();
+              if (model.avatar_url) setModelAvatarUrl(model.avatar_url);
+              if (model.lock_popup_custom) {
+                setIsModelPersona(true);
+                setLockVariant("landing");
+                setLockMessage(model.lock_message ?? null);
+                setLockButtonUrl(model.lock_button_url ?? null);
+                setLockButtonLabel(
+                  model.lock_button_label?.trim() || "Message on OnlyFans"
+                );
+                return;
+              }
+            }
+          } catch {
+            /* fall through to global */
+          }
+        }
+
+        setLockVariant("global");
+        setLockMessage(null);
+        try {
+          const settingsRes = await fetch("/api/settings");
+          const settings = await settingsRes.json();
+          if (settings && !settings.error) {
+            setLockContactName(settings.lock_contact_name?.trim() || "her");
+            setLockButtonUrl(settings.lock_button_url ?? null);
+            setLockButtonLabel(
+              settings.lock_button_label?.trim() || "Message on OnlyFans"
+            );
+          }
+        } catch {
+          /* keep defaults */
+        }
+      }
+
       if (data.model_slug) {
         setIsModelPersona(true);
-        fetch(`/api/models/${data.model_slug}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(m => {
-            if (m?.avatar_url) setModelAvatarUrl(m.avatar_url);
-          })
-          .catch(() => {});
       }
+      await applyLockPopupForConversation(data);
     }
     load();
   }, [conversationId, router]);
 
-  function applyLockPopupConfig(data: {
-    lock_contact_name?: string | null;
-    lock_button_url?: string | null;
-    lock_button_label?: string | null;
-  }) {
-    setLockContactName(data.lock_contact_name?.trim() || "her");
-    setLockButtonUrl(data.lock_button_url ?? null);
-    setLockButtonLabel(data.lock_button_label?.trim() || "Message on OnlyFans");
-  }
-
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data && !data.error) applyLockPopupConfig(data);
-      })
-      .catch(() => {});
-
     const settingsChannel = supabase
       .channel("app-settings-lock-popup")
       .on(
@@ -122,12 +143,16 @@ export default function ChatPage() {
           filter: "id=eq.landing",
         },
         (payload) => {
-          applyLockPopupConfig(
-            payload.new as {
-              lock_contact_name?: string | null;
-              lock_button_url?: string | null;
-              lock_button_label?: string | null;
-            }
+          if (lockVariant !== "global") return;
+          const row = payload.new as {
+            lock_contact_name?: string | null;
+            lock_button_url?: string | null;
+            lock_button_label?: string | null;
+          };
+          setLockContactName(row.lock_contact_name?.trim() || "her");
+          setLockButtonUrl(row.lock_button_url ?? null);
+          setLockButtonLabel(
+            row.lock_button_label?.trim() || "Message on OnlyFans"
           );
         }
       )
@@ -136,7 +161,7 @@ export default function ChatPage() {
     return () => {
       supabase.removeChannel(settingsChannel);
     };
-  }, []);
+  }, [lockVariant]);
 
   // Load messages
   useEffect(() => {
@@ -410,7 +435,9 @@ export default function ChatPage() {
     <div className="page-shell relative" style={{ background: "var(--bg)" }}>
       {chatLocked && (
         <ChatLockModal
+          variant={lockVariant}
           contactName={lockContactName}
+          lockMessage={lockMessage}
           personaName={currentPersona}
           avatarUrl={modelAvatarUrl}
           buttonUrl={lockButtonUrl}

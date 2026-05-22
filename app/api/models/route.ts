@@ -15,7 +15,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { slug, name, avatar_url, subtitle } = await req.json();
+  const {
+    slug,
+    name,
+    avatar_url,
+    subtitle,
+    lock_popup_custom,
+    lock_message,
+    lock_button_url,
+    lock_button_label,
+  } = await req.json();
 
   if (!slug || !name) {
     return NextResponse.json({ error: "slug and name are required" }, { status: 400 });
@@ -30,7 +39,25 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("model_profiles")
-    .insert({ slug: cleanSlug, name, avatar_url: avatar_url ?? null, subtitle: subtitle ?? "Meet people near you" })
+    .insert({
+      slug: cleanSlug,
+      name,
+      avatar_url: avatar_url ?? null,
+      subtitle: subtitle ?? "Meet people near you",
+      lock_popup_custom: Boolean(lock_popup_custom),
+      lock_message:
+        typeof lock_message === "string" && lock_message.trim()
+          ? lock_message.trim()
+          : null,
+      lock_button_url:
+        typeof lock_button_url === "string" && lock_button_url.trim()
+          ? lock_button_url.trim()
+          : null,
+      lock_button_label:
+        typeof lock_button_label === "string" && lock_button_label.trim()
+          ? lock_button_label.trim()
+          : "Message on OnlyFans",
+    })
     .select()
     .single();
 

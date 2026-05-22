@@ -3,7 +3,9 @@
 import { ModelAvatar } from "@/components/ModelAvatar";
 
 type ChatLockModalProps = {
-  contactName: string;
+  variant?: "global" | "landing";
+  contactName?: string;
+  lockMessage?: string | null;
   personaName: string;
   avatarUrl: string | null;
   buttonUrl: string | null;
@@ -11,14 +13,17 @@ type ChatLockModalProps = {
 };
 
 export function ChatLockModal({
-  contactName,
+  variant = "global",
+  contactName = "",
+  lockMessage = "",
   personaName,
   avatarUrl,
   buttonUrl,
   buttonLabel,
 }: ChatLockModalProps) {
-  const name = contactName.trim() || "her";
+  const name = contactName.trim() || personaName.trim() || "her";
   const label = buttonLabel.trim() || "Message on OnlyFans";
+  const isLanding = variant === "landing";
 
   return (
     <div
@@ -55,14 +60,38 @@ export function ChatLockModal({
             </div>
           </div>
         </div>
-        <p
-          id="chat-lock-title"
-          className="text-base font-semibold leading-relaxed text-white"
-        >
-          You&apos;re Free trial has ended, please message{" "}
-          <span style={{ color: "var(--accent-light)" }}>{name}</span> on her FREE
-          Onlyfans
-        </p>
+
+        {isLanding ? (
+          <>
+            <p
+              id="chat-lock-title"
+              className="text-lg font-bold text-white mb-3"
+            >
+              {personaName.trim() || name}
+            </p>
+            {lockMessage?.trim() ? (
+              <p
+                className="text-base leading-relaxed text-white whitespace-pre-wrap"
+                style={{ color: "var(--text)" }}
+              >
+                {lockMessage.trim()}
+              </p>
+            ) : (
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Add lock popup text in Admin → Links → Edit profile.
+              </p>
+            )}
+          </>
+        ) : (
+          <p
+            id="chat-lock-title"
+            className="text-base font-semibold leading-relaxed text-white"
+          >
+            You&apos;re Free trial has ended, please message{" "}
+            <span style={{ color: "var(--accent-light)" }}>{name}</span> on her
+            FREE Onlyfans
+          </p>
+        )}
 
         {buttonUrl ? (
           <a

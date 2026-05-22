@@ -99,6 +99,10 @@ export type Database = {
           avatar_url: string | null;
           subtitle: string;
           redirect_url: string | null;
+          lock_popup_custom: boolean;
+          lock_message: string | null;
+          lock_button_url: string | null;
+          lock_button_label: string | null;
           created_at: string;
         };
         Insert: {
@@ -108,6 +112,10 @@ export type Database = {
           avatar_url?: string | null;
           subtitle?: string;
           redirect_url?: string | null;
+          lock_popup_custom?: boolean;
+          lock_message?: string | null;
+          lock_button_url?: string | null;
+          lock_button_label?: string | null;
           created_at?: string;
         };
         Update: {
@@ -117,6 +125,10 @@ export type Database = {
           avatar_url?: string | null;
           subtitle?: string;
           redirect_url?: string | null;
+          lock_popup_custom?: boolean;
+          lock_message?: string | null;
+          lock_button_url?: string | null;
+          lock_button_label?: string | null;
           created_at?: string;
         };
         Relationships: [];

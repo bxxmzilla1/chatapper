@@ -151,6 +151,10 @@ export default function AdminPage() {
   const [editModelSubtitle, setEditModelSubtitle] = useState("");
   const [editModelAvatar, setEditModelAvatar] = useState<File | null>(null);
   const [editModelAvatarPreview, setEditModelAvatarPreview] = useState<string | null>(null);
+  const [editLockPopupCustom, setEditLockPopupCustom] = useState(false);
+  const [editLockMessage, setEditLockMessage] = useState("");
+  const [editLockButtonUrl, setEditLockButtonUrl] = useState("");
+  const [editLockButtonLabel, setEditLockButtonLabel] = useState("Message on OnlyFans");
   const [savingEditModel, setSavingEditModel] = useState(false);
   const editAvatarRef = useRef<HTMLInputElement>(null);
   const modelAvatarRef = useRef<HTMLInputElement>(null);
@@ -548,6 +552,10 @@ export default function AdminPage() {
           name: original.name,
           avatar_url: original.avatar_url,
           subtitle: original.subtitle,
+          lock_popup_custom: original.lock_popup_custom ?? false,
+          lock_message: original.lock_message,
+          lock_button_url: original.lock_button_url,
+          lock_button_label: original.lock_button_label,
         }),
       });
       if (res.ok) {
@@ -591,6 +599,12 @@ export default function AdminPage() {
           name: editModelName.trim() || m.name,
           subtitle: editModelSubtitle.trim() || m.subtitle,
           avatar_url,
+          lock_popup_custom: editLockPopupCustom,
+          lock_message: editLockPopupCustom ? editLockMessage.trim() || null : null,
+          lock_button_url: editLockPopupCustom ? editLockButtonUrl.trim() || null : null,
+          lock_button_label: editLockPopupCustom
+            ? editLockButtonLabel.trim() || "Message on OnlyFans"
+            : "Message on OnlyFans",
         }),
       });
       if (res.ok) {
@@ -953,12 +967,21 @@ export default function AdminPage() {
                   <div className="flex-1 min-w-0">
                     {/* Row 1: name + time */}
                     <div className="flex items-center justify-between gap-2">
-                      <p
-                        className="font-semibold text-sm truncate text-white"
-                        style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
-                      >
-                        {conv.user_username}
-                      </p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p
+                          className="font-semibold text-sm truncate text-white"
+                          style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
+                        >
+                          {conv.user_username}
+                        </p>
+                        {conv.chat_locked && (
+                          <Lock
+                            className="w-3.5 h-3.5 flex-shrink-0"
+                            style={{ color: "#f87171" }}
+                            aria-label="Chat locked"
+                          />
+                        )}
+                      </div>
                       <span
                         className="text-xs flex-shrink-0"
                         style={{ color: "var(--text-muted)" }}
@@ -1367,6 +1390,90 @@ export default function AdminPage() {
                         />
                       </div>
 
+                      <div
+                        className="rounded-xl p-3 flex flex-col gap-3"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-white">Custom lock popup</p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                              Photo, name, your text, and button — only for this link
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditLockPopupCustom(!editLockPopupCustom)}
+                            className="relative flex-shrink-0 w-11 h-6 rounded-full transition-all"
+                            style={{
+                              background: editLockPopupCustom ? "var(--accent)" : "var(--surface2)",
+                            }}
+                          >
+                            <span
+                              className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
+                              style={{
+                                left: editLockPopupCustom ? "calc(100% - 20px)" : "4px",
+                              }}
+                            />
+                          </button>
+                        </div>
+                        {editLockPopupCustom && (
+                          <>
+                            <div>
+                              <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>
+                                Popup message
+                              </label>
+                              <textarea
+                                value={editLockMessage}
+                                onChange={e => setEditLockMessage(e.target.value)}
+                                placeholder="Your free trial has ended…"
+                                rows={3}
+                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none"
+                                style={{
+                                  background: "var(--surface2)",
+                                  border: "1px solid var(--border)",
+                                  color: "var(--text)",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>
+                                Button link URL
+                              </label>
+                              <input
+                                type="url"
+                                value={editLockButtonUrl}
+                                onChange={e => setEditLockButtonUrl(e.target.value)}
+                                placeholder="https://onlyfans.com/…"
+                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                                style={{
+                                  background: "var(--surface2)",
+                                  border: "1px solid var(--border)",
+                                  color: "var(--text)",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>
+                                Button text
+                              </label>
+                              <input
+                                type="text"
+                                value={editLockButtonLabel}
+                                onChange={e => setEditLockButtonLabel(e.target.value)}
+                                placeholder="Message on OnlyFans"
+                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                                style={{
+                                  background: "var(--surface2)",
+                                  border: "1px solid var(--border)",
+                                  color: "var(--text)",
+                                }}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+
                       <div className="flex gap-2">
                         <button onClick={() => setEditingModelSlug(null)}
                           className="flex-1 py-2.5 rounded-xl text-xs font-medium" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
@@ -1538,7 +1645,7 @@ export default function AdminPage() {
             >
               <p className="text-sm font-semibold text-white">User lock popup</p>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Message and button shown when you lock a chat. Use the Lock button in that chat&apos;s header — only that user is locked. They can still read messages until you unlock.
+                Default popup for main landing and non-custom chats. Custom landing pages use their own lock settings under Links → Edit profile. Lock a chat from its header — only that user is affected.
               </p>
               <div>
                 <label className="text-xs mb-1 block" style={{ color: "var(--text-muted)" }}>Custom name in message</label>

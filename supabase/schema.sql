@@ -256,3 +256,18 @@ ALTER TABLE public.app_settings
 -- ============================================================
 ALTER TABLE public.conversations
   ADD COLUMN IF NOT EXISTS chat_locked BOOLEAN NOT NULL DEFAULT false;
+
+-- ============================================================
+-- MIGRATION 10: Per-model landing page lock popup settings
+-- ============================================================
+ALTER TABLE public.model_profiles
+  ADD COLUMN IF NOT EXISTS lock_popup_custom BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.model_profiles
+  ADD COLUMN IF NOT EXISTS lock_message TEXT;
+
+ALTER TABLE public.model_profiles
+  ADD COLUMN IF NOT EXISTS lock_button_url TEXT;
+
+ALTER TABLE public.model_profiles
+  ADD COLUMN IF NOT EXISTS lock_button_label TEXT DEFAULT 'Message on OnlyFans';
