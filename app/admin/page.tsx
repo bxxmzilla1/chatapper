@@ -982,8 +982,7 @@ export default function AdminPage() {
                     <ModelAvatar
                       url={m.avatar_url}
                       name={m.name}
-                      size={160}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      className="w-10 h-10 rounded-full object-cover shrink-0 text-sm"
                     />
                     {/* Info */}
                     <div className="flex-1 min-w-0">
@@ -1147,8 +1146,7 @@ export default function AdminPage() {
                             <ModelAvatar
                               url={editModelAvatarPreview}
                               name={editModelName || m.name}
-                              size={320}
-                              className="w-full h-full rounded-full object-cover"
+                              className="w-full h-full rounded-full object-cover text-2xl"
                             />
                           )
                         ) : (

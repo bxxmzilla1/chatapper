@@ -75,14 +75,10 @@ export default function ChatPage() {
       setMatchHistory([data.admin_username]);
       if (data.model_slug) {
         setIsModelPersona(true);
-        if (data.model_avatar_url) {
-          setModelAvatarUrl(data.model_avatar_url);
-        } else {
-          fetch(`/api/models/${data.model_slug}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
-            .catch(() => {});
-        }
+        fetch(`/api/models/${data.model_slug}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(m => { if (m?.avatar_url) setModelAvatarUrl(m.avatar_url); })
+          .catch(() => {});
       }
     }
     load();
@@ -392,8 +388,7 @@ export default function ChatPage() {
           <ModelAvatar
             url={modelAvatarUrl}
             name={currentPersona}
-            size={160}
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-10 h-10 rounded-full object-cover text-sm"
           />
           <span
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
@@ -439,8 +434,6 @@ export default function ChatPage() {
             <ModelAvatar
               url={modelAvatarUrl}
               name={currentPersona}
-              size={320}
-              fallback="accent"
               className="w-16 h-16 rounded-full object-cover text-2xl"
             />
             <div className="flex items-center gap-1.5">

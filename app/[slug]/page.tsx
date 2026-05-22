@@ -143,9 +143,7 @@ export default function ModelLandingPage() {
                 <ModelAvatar
                   url={model.avatar_url}
                   name={model.name}
-                  size={420}
-                  priority
-                  className="w-24 h-24 rounded-full object-cover"
+                  className="w-24 h-24 rounded-full object-cover text-3xl"
                 />
               </div>
               <span
