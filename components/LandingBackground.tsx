@@ -16,7 +16,7 @@ export function LandingBackground({ videoUrl, overlayOpacity }: LandingBackgroun
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="auto"
           className="absolute inset-0 w-full h-full object-cover"
           src={videoUrl}
         />

@@ -95,3 +95,83 @@ export async function ensureMp4(
     throw err;
   }
 }
+
+/** Re-encode landing background videos to 720p MP4 (no audio) for faster page loads. */
+export async function compressLandingVideo(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<File> {
+  const instance = await getFFmpeg();
+
+  const progressHandler = onProgress
+    ? ({ progress }: { progress: number }) =>
+        onProgress(Math.min(99, Math.round(progress * 100)))
+    : null;
+  if (progressHandler) instance.on("progress", progressHandler);
+
+  const ext = (file.name.split(".").pop() ?? "mp4").toLowerCase() || "mp4";
+  const inputName = `landing_in.${ext}`;
+
+  try {
+    await instance.writeFile(inputName, await fetchFile(file));
+
+    await instance.exec([
+      "-i",
+      inputName,
+      "-vf",
+      "scale=-2:720",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "28",
+      "-an",
+      "-movflags",
+      "faststart",
+      "landing_out.mp4",
+    ]);
+
+    const data = await instance.readFile("landing_out.mp4");
+    const raw = data as Uint8Array;
+    const buf = raw.buffer.slice(
+      raw.byteOffset,
+      raw.byteOffset + raw.byteLength
+    ) as ArrayBuffer;
+    const converted = new File([buf], "landing-background.mp4", {
+      type: "video/mp4",
+    });
+
+    try {
+      instance.deleteFile(inputName);
+    } catch {
+      /* ignore */
+    }
+    try {
+      instance.deleteFile("landing_out.mp4");
+    } catch {
+      /* ignore */
+    }
+
+    if (progressHandler) {
+      instance.off("progress", progressHandler);
+      onProgress?.(100);
+    }
+
+    return converted;
+  } catch (err) {
+    try {
+      instance.deleteFile(inputName);
+    } catch {
+      /* ignore */
+    }
+    try {
+      instance.deleteFile("landing_out.mp4");
+    } catch {
+      /* ignore */
+    }
+    if (progressHandler) instance.off("progress", progressHandler);
+    ffmpeg = null;
+    throw err;
+  }
+}

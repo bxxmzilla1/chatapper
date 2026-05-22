@@ -163,6 +163,7 @@ export default function AdminPage() {
   const [landingSettings, setLandingSettings] = useState<AppSettings | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(55);
   const [uploadingBgVideo, setUploadingBgVideo] = useState(false);
+  const [bgVideoStatus, setBgVideoStatus] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
@@ -338,22 +339,27 @@ export default function AdminPage() {
     const preview = URL.createObjectURL(file);
     setLocalVideoPreview(preview);
     setUploadingBgVideo(true);
+    setBgVideoStatus("Compressing to 720p…");
     setSettingsError("");
 
     try {
-      const ext = (file.name.split(".").pop() ?? "mp4").toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        mp4: "video/mp4",
-        mov: "video/quicktime",
-        webm: "video/webm",
-        m4v: "video/mp4",
-      };
-      const contentType = file.type || mimeTypes[ext] || "video/mp4";
-      const path = `landing/background-${Date.now()}.${ext}`;
+      const { compressLandingVideo } = await import("@/lib/convert-video");
+      let uploadFile: File;
+      try {
+        uploadFile = await compressLandingVideo(file, (pct) => {
+          setBgVideoStatus(`Compressing to 720p… ${pct}%`);
+        });
+      } catch {
+        uploadFile = file;
+        setBgVideoStatus("Uploading (compression skipped)…");
+      }
+
+      setBgVideoStatus("Uploading…");
+      const path = `landing/background-${Date.now()}.mp4`;
 
       const { error: upErr } = await supabase.storage
         .from("chat-media")
-        .upload(path, file, { contentType, upsert: false });
+        .upload(path, uploadFile, { contentType: "video/mp4", upsert: false });
 
       if (upErr) throw new Error(upErr.message);
 
@@ -365,6 +371,7 @@ export default function AdminPage() {
       setSettingsError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploadingBgVideo(false);
+      setBgVideoStatus(null);
       if (bgVideoRef.current) bgVideoRef.current.value = "";
     }
   }
@@ -1696,6 +1703,9 @@ export default function AdminPage() {
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
               <p className="text-sm font-semibold text-white">Background video</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Videos are compressed to 720p (no audio) on upload so landing pages load faster. Re-upload an existing video to apply.
+              </p>
 
               {previewVideoUrl ? (
                 <div className="relative rounded-xl overflow-hidden aspect-video bg-black">
@@ -1740,7 +1750,11 @@ export default function AdminPage() {
                   style={{ background: "var(--accent)", color: "#0a0a0a" }}
                 >
                   <Upload className="w-4 h-4" />
-                  {uploadingBgVideo ? "Uploading…" : previewVideoUrl ? "Replace video" : "Upload video"}
+                  {uploadingBgVideo
+                    ? bgVideoStatus ?? "Uploading…"
+                    : previewVideoUrl
+                      ? "Replace video"
+                      : "Upload video"}
                 </button>
                 {previewVideoUrl && !uploadingBgVideo && (
                   <button
