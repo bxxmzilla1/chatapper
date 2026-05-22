@@ -716,8 +716,8 @@ export default function AdminPage() {
                     {/* Row 1: name + time */}
                     <div className="flex items-center justify-between gap-2">
                       <p
-                        className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}
-                        style={{ fontWeight: conv.unread_count > 0 ? 700 : 500 }}
+                        className="font-semibold text-sm truncate"
+                        style={{ color: "var(--text)", fontWeight: conv.unread_count > 0 ? 700 : 500 }}
                       >
                         {conv.user_username}
                       </p>
