@@ -158,6 +158,8 @@ export default function AdminPage() {
   const [overlayOpacity, setOverlayOpacity] = useState(55);
   const [uploadingBgVideo, setUploadingBgVideo] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
   const bgVideoRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -218,14 +220,20 @@ export default function AdminPage() {
 
   const loadSettings = useCallback(async () => {
     try {
+      setSettingsError("");
       const res = await fetch("/api/settings");
       const data = await res.json();
-      if (res.ok && data) {
-        setLandingSettings(data);
-        setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+      if (!res.ok) {
+        throw new Error(data.error || "Could not load settings");
       }
-    } catch {
-      /* ignore */
+      setLandingSettings(data);
+      setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
+    } catch (err) {
+      setSettingsError(
+        err instanceof Error
+          ? err.message
+          : "Could not load settings. Run Migration 5 in supabase/schema.sql."
+      );
     }
   }, []);
 
@@ -242,6 +250,7 @@ export default function AdminPage() {
 
   async function patchSettings(body: Record<string, unknown>) {
     setSavingSettings(true);
+    setSettingsError("");
     try {
       const res = await fetch("/api/settings", {
         method: "PATCH",
@@ -249,11 +258,19 @@ export default function AdminPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            "Could not save settings. Add the app_settings table (Migration 5 in supabase/schema.sql)."
+        );
+      }
       setLandingSettings(data);
       setOverlayOpacity(Math.round((data.overlay_opacity ?? 0.55) * 100));
-    } catch {
-      /* ignore */
+      return data as AppSettings;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setSettingsError(msg);
+      throw err;
     } finally {
       setSavingSettings(false);
     }
@@ -262,16 +279,42 @@ export default function AdminPage() {
   async function handleBgVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setSettingsError("Video must be under 50MB.");
+      if (bgVideoRef.current) bgVideoRef.current.value = "";
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    setLocalVideoPreview(preview);
     setUploadingBgVideo(true);
+    setSettingsError("");
+
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const up = await fetch("/api/settings/upload", { method: "POST", body: fd });
-      const upData = await up.json();
-      if (!up.ok) throw new Error(upData.error || "Upload failed");
-      await patchSettings({ background_video_url: upData.url });
-    } catch {
-      /* ignore */
+      const ext = (file.name.split(".").pop() ?? "mp4").toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        mp4: "video/mp4",
+        mov: "video/quicktime",
+        webm: "video/webm",
+        m4v: "video/mp4",
+      };
+      const contentType = file.type || mimeTypes[ext] || "video/mp4";
+      const path = `landing/background-${Date.now()}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("chat-media")
+        .upload(path, file, { contentType, upsert: false });
+
+      if (upErr) throw new Error(upErr.message);
+
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(path);
+      await patchSettings({ background_video_url: urlData.publicUrl });
+      setLocalVideoPreview(null);
+      URL.revokeObjectURL(preview);
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploadingBgVideo(false);
       if (bgVideoRef.current) bgVideoRef.current.value = "";
@@ -283,8 +326,16 @@ export default function AdminPage() {
   }
 
   async function removeBgVideo() {
-    await patchSettings({ background_video_url: null });
+    setLocalVideoPreview(null);
+    try {
+      await patchSettings({ background_video_url: null });
+    } catch {
+      /* error shown via settingsError */
+    }
   }
+
+  const previewVideoUrl =
+    localVideoPreview ?? landingSettings?.background_video_url ?? null;
 
   // Badge is visible only when the conversation's current persona IS the original model name
   function showModelBadge(conv: Conversation) {
@@ -1244,21 +1295,32 @@ export default function AdminPage() {
               Background video and overlay for the main and custom model landing pages.
             </p>
 
+            {settingsError && (
+              <div
+                className="mb-4 px-3 py-2.5 rounded-xl text-xs text-red-300"
+                style={{ background: "rgba(127,29,29,0.35)", border: "1px solid rgba(248,113,113,0.4)" }}
+              >
+                {settingsError}
+              </div>
+            )}
+
             <div
               className="rounded-2xl p-4 mb-6 flex flex-col gap-4"
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
               <p className="text-sm font-semibold text-white">Background video</p>
 
-              {landingSettings?.background_video_url ? (
+              {previewVideoUrl ? (
                 <div className="relative rounded-xl overflow-hidden aspect-video bg-black">
                   <video
-                    src={landingSettings.background_video_url}
+                    key={previewVideoUrl}
+                    src={previewVideoUrl}
                     className="w-full h-full object-cover"
                     muted
                     loop
                     playsInline
                     autoPlay
+                    controls
                   />
                   <div
                     className="absolute inset-0 pointer-events-none"
@@ -1291,9 +1353,9 @@ export default function AdminPage() {
                   style={{ background: "var(--accent)", color: "#0a0a0a" }}
                 >
                   <Upload className="w-4 h-4" />
-                  {uploadingBgVideo ? "Uploading…" : landingSettings?.background_video_url ? "Replace video" : "Upload video"}
+                  {uploadingBgVideo ? "Uploading…" : previewVideoUrl ? "Replace video" : "Upload video"}
                 </button>
-                {landingSettings?.background_video_url && (
+                {previewVideoUrl && !uploadingBgVideo && (
                   <button
                     type="button"
                     onClick={removeBgVideo}

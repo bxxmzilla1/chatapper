@@ -12,6 +12,15 @@ export async function GET() {
     .single();
 
   if (error) {
+    if (error.code === "PGRST205" || error.message.includes("app_settings")) {
+      return NextResponse.json(
+        {
+          error:
+            "app_settings table missing. Run Migration 5 in supabase/schema.sql in the Supabase SQL Editor.",
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({
       id: SETTINGS_ID,
       background_video_url: null,

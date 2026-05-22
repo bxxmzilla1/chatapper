@@ -200,6 +200,10 @@ DROP POLICY IF EXISTS "Public read app_settings" ON public.app_settings;
 CREATE POLICY "Public read app_settings"
   ON public.app_settings FOR SELECT TO anon, authenticated USING (true);
 
+DROP POLICY IF EXISTS "Public insert app_settings" ON public.app_settings;
+CREATE POLICY "Public insert app_settings"
+  ON public.app_settings FOR INSERT TO anon, authenticated WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Public update app_settings" ON public.app_settings;
 CREATE POLICY "Public update app_settings"
   ON public.app_settings FOR UPDATE TO anon, authenticated USING (true);
